@@ -59,9 +59,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Claude Memory Viewer ${{ github.ref_name }}'
+          releaseName: 'AI Session Viewer ${{ github.ref_name }}'
           releaseBody: |
-            See the [CHANGELOG](https://github.com/zuoliangyu/claude-memory-viewer/blob/main/CHANGELOG.md) for details.
+            See the [CHANGELOG](https://github.com/zuoliangyu/AI-Session-Viewer/blob/main/CHANGELOG.md) for details.
 
             ## Downloads
 
@@ -82,9 +82,9 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $exePath = "src-tauri/target/release/claude-memory-viewer.exe"
+          $exePath = "src-tauri/target/release/ai-session-viewer.exe"
           if (Test-Path $exePath) {
-            $zipName = "claude-memory-viewer-${{ github.ref_name }}-windows-portable.zip"
+            $zipName = "ai-session-viewer-${{ github.ref_name }}-windows-portable.zip"
             Compress-Archive -Path $exePath -DestinationPath $zipName
             Write-Output "PORTABLE_ZIP=$zipName" >> $env:GITHUB_OUTPUT
             Write-Output "Created portable zip: $zipName"
