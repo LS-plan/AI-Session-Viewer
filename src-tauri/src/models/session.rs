@@ -25,15 +25,3 @@ pub struct SessionIndexEntry {
     pub is_sidechain: Option<bool>,
 }
 
-/// Session info derived from scanning JSONL files when no index is available
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionInfo {
-    pub session_id: String,
-    pub first_prompt: Option<String>,
-    pub message_count: u32,
-    pub created: Option<String>,
-    pub modified: Option<String>,
-    pub git_branch: Option<String>,
-    pub project_path: Option<String>,
-}

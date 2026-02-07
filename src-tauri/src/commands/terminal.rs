@@ -51,7 +51,6 @@ pub fn resume_session(session_id: String, project_path: String) -> Result<(), St
         );
 
         // Try various terminal emulators
-        let bash_cmd = format!("bash -c '{}'", cmd_str);
         let xfce_arg = format!("bash -c '{}'", cmd_str);
         let xterm_arg = format!("bash -c '{}'", cmd_str);
         let terminals: [(&str, &[&str]); 4] = [

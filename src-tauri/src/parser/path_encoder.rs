@@ -39,11 +39,7 @@ pub fn decode_project_path(encoded: &str) -> String {
         }
     } else {
         // On Unix, pattern is like "-Users-zuolan-Desktop-LB" -> "/Users/zuolan/Desktop/LB"
-        if encoded.starts_with('-') {
-            encoded.replace('-', "/")
-        } else {
-            encoded.replace('-', "/")
-        }
+        encoded.replace('-', "/")
     }
 }
 

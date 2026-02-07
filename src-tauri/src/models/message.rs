@@ -4,6 +4,7 @@ use serde_json::Value;
 /// A raw JSONL record from a session file
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct RawRecord {
     #[serde(rename = "type")]
     pub record_type: String,

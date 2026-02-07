@@ -112,7 +112,7 @@ fn count_messages(path: &PathBuf) -> u32 {
     };
     let reader = BufReader::new(file);
     let mut count: u32 = 0;
-    for line in reader.lines().flatten() {
+    for line in reader.lines().map_while(Result::ok) {
         let trimmed = line.trim();
         if trimmed.contains("\"type\":\"user\"") || trimmed.contains("\"type\":\"assistant\"") {
             count += 1;
