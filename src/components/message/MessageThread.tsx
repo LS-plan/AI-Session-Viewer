@@ -10,7 +10,7 @@ interface MessageThreadProps {
 
 export function MessageThread({ messages, source }: MessageThreadProps) {
   return (
-    <div className="max-w-4xl mx-auto py-6 px-6 space-y-4">
+    <div className="max-w-4xl mx-auto py-6 px-6 space-y-3">
       {messages.map((msg, i) => {
         if (msg.role === "user") {
           return <UserMessage key={msg.uuid || i} message={msg} />;

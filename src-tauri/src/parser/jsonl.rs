@@ -15,6 +15,7 @@ pub fn parse_session_messages(
     path: &Path,
     page: usize,
     page_size: usize,
+    from_end: bool,
 ) -> Result<PaginatedMessages, String> {
     let file = File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
     let reader = BufReader::new(file);
@@ -68,23 +69,49 @@ pub fn parse_session_messages(
     }
 
     let total = all_messages.len();
-    let start = page * page_size;
-    let end = (start + page_size).min(total);
-    let has_more = end < total;
 
-    let page_messages = if start < total {
-        all_messages[start..end].to_vec()
+    if from_end {
+        // page=0 means last page, page=1 means second-to-last, etc.
+        let end = if total > page * page_size {
+            total - page * page_size
+        } else {
+            0
+        };
+        let start = if end > page_size { end - page_size } else { 0 };
+        let has_more = start > 0;
+
+        let page_messages = if end > 0 {
+            all_messages[start..end].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(PaginatedMessages {
+            messages: page_messages,
+            total,
+            page,
+            page_size,
+            has_more,
+        })
     } else {
-        Vec::new()
-    };
+        let start = page * page_size;
+        let end = (start + page_size).min(total);
+        let has_more = end < total;
 
-    Ok(PaginatedMessages {
-        messages: page_messages,
-        total,
-        page,
-        page_size,
-        has_more,
-    })
+        let page_messages = if start < total {
+            all_messages[start..end].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(PaginatedMessages {
+            messages: page_messages,
+            total,
+            page,
+            page_size,
+            has_more,
+        })
+    }
 }
 
 /// Parse all messages from a JSONL file (no pagination, for search)

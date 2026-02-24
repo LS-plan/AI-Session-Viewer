@@ -18,7 +18,7 @@ export function AssistantMessage({ message, source }: Props) {
   const iconBg = source === "codex" ? "bg-green-500/10" : "bg-orange-500/10";
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 rounded-lg p-4 border border-border/50">
       <div className={`shrink-0 w-7 h-7 rounded-full ${iconBg} flex items-center justify-center`}>
         <Bot className={`w-3.5 h-3.5 ${iconColor}`} />
       </div>
@@ -34,7 +34,7 @@ export function AssistantMessage({ message, source }: Props) {
         {message.content.map((block, i) => {
           if (block.type === "text") {
             return (
-              <div key={i} className="prose prose-sm max-w-none text-sm leading-relaxed">
+              <div key={i} className="prose prose-sm max-w-none text-sm leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -129,7 +129,7 @@ export function AssistantMessage({ message, source }: Props) {
                       return <hr className="border-border my-4" />;
                     },
                     p({ children }) {
-                      return <p className="my-1.5">{children}</p>;
+                      return <p className="my-2 leading-relaxed">{children}</p>;
                     },
                   }}
                 >

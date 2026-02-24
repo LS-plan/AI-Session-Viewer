@@ -156,8 +156,9 @@ pub fn parse_session_messages(
     path: &std::path::Path,
     page: usize,
     page_size: usize,
+    from_end: bool,
 ) -> Result<PaginatedMessages, String> {
-    claude_parser::parse_session_messages(path, page, page_size)
+    claude_parser::parse_session_messages(path, page, page_size, from_end)
 }
 
 /// Parse all messages (for search)

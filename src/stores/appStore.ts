@@ -125,7 +125,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       messagesPage: 0,
     });
     try {
-      const result = await api.getMessages(get().source, filePath, 0, 50);
+      const result = await api.getMessages(get().source, filePath, 0, 50, true);
       set({
         messages: result.messages,
         messagesTotal: result.total,
@@ -163,10 +163,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         state.source,
         state.selectedFilePath,
         nextPage,
-        50
+        50,
+        true
       );
       set({
-        messages: [...state.messages, ...result.messages],
+        messages: [...result.messages, ...state.messages],
         messagesPage: nextPage,
         messagesHasMore: result.hasMore,
         messagesLoading: false,

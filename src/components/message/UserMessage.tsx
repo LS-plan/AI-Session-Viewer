@@ -1,5 +1,7 @@
 import type { DisplayMessage } from "../../types";
 import { User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { formatTime } from "./utils";
 
 interface Props {
@@ -8,7 +10,7 @@ interface Props {
 
 export function UserMessage({ message }: Props) {
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 bg-primary/5 rounded-lg p-4">
       <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
         <User className="w-3.5 h-3.5 text-primary" />
       </div>
@@ -24,8 +26,10 @@ export function UserMessage({ message }: Props) {
         {message.content.map((block, i) => {
           if (block.type === "text") {
             return (
-              <div key={i} className="text-sm whitespace-pre-wrap break-words">
-                {block.text}
+              <div key={i} className="prose prose-sm max-w-none text-sm leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {block.text}
+                </ReactMarkdown>
               </div>
             );
           }

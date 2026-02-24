@@ -312,27 +312,53 @@ pub fn parse_session_messages(
     path: &Path,
     page: usize,
     page_size: usize,
+    from_end: bool,
 ) -> Result<PaginatedMessages, String> {
     let all_messages = parse_all_messages(path)?;
 
     let total = all_messages.len();
-    let start = page * page_size;
-    let end = (start + page_size).min(total);
-    let has_more = end < total;
 
-    let page_messages = if start < total {
-        all_messages[start..end].to_vec()
+    if from_end {
+        let end = if total > page * page_size {
+            total - page * page_size
+        } else {
+            0
+        };
+        let start = if end > page_size { end - page_size } else { 0 };
+        let has_more = start > 0;
+
+        let page_messages = if end > 0 {
+            all_messages[start..end].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(PaginatedMessages {
+            messages: page_messages,
+            total,
+            page,
+            page_size,
+            has_more,
+        })
     } else {
-        Vec::new()
-    };
+        let start = page * page_size;
+        let end = (start + page_size).min(total);
+        let has_more = end < total;
 
-    Ok(PaginatedMessages {
-        messages: page_messages,
-        total,
-        page,
-        page_size,
-        has_more,
-    })
+        let page_messages = if start < total {
+            all_messages[start..end].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok(PaginatedMessages {
+            messages: page_messages,
+            total,
+            page,
+            page_size,
+            has_more,
+        })
+    }
 }
 
 pub fn parse_all_messages(path: &Path) -> Result<Vec<DisplayMessage>, String> {

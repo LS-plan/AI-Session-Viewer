@@ -22,13 +22,15 @@ export async function getMessages(
   source: string,
   filePath: string,
   page: number = 0,
-  pageSize: number = 50
+  pageSize: number = 50,
+  fromEnd: boolean = false
 ): Promise<PaginatedMessages> {
   return invoke<PaginatedMessages>("get_messages", {
     source,
     filePath,
     page,
     pageSize,
+    fromEnd,
   });
 }
 

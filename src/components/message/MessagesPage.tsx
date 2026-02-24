@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppStore } from "../../stores/appStore";
-import { ArrowLeft, Play, Loader2, ArrowDown } from "lucide-react";
+import { ArrowLeft, Play, Loader2, ArrowDown, ArrowUp } from "lucide-react";
 import { MessageThread } from "./MessageThread";
 import { resumeSession } from "../../services/tauriApi";
 
@@ -26,30 +26,69 @@ export function MessagesPage() {
     projects,
   } = useAppStore();
 
-  const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const [showScrollDown, setShowScrollDown] = useState(false);
+  const [showScrollUp, setShowScrollUp] = useState(false);
+  const [initialScrollDone, setInitialScrollDone] = useState(false);
+  const prevScrollHeightRef = useRef<number>(0);
+  const isLoadingOlderRef = useRef(false);
 
   const session = sessions.find((s) => s.filePath === filePath);
   const project = projects.find((p) => p.id === projectId);
 
   useEffect(() => {
     if (filePath) {
+      setInitialScrollDone(false);
       selectSession(filePath);
     }
   }, [filePath]);
 
+  // Auto-scroll to bottom on initial load
+  useEffect(() => {
+    if (!initialScrollDone && messages.length > 0 && !messagesLoading) {
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+        }
+        setInitialScrollDone(true);
+      });
+    }
+  }, [messages, messagesLoading, initialScrollDone]);
+
+  // Preserve scroll position after prepending older messages
+  useEffect(() => {
+    if (isLoadingOlderRef.current && !messagesLoading && containerRef.current) {
+      const newScrollHeight = containerRef.current.scrollHeight;
+      const addedHeight = newScrollHeight - prevScrollHeightRef.current;
+      containerRef.current.scrollTop += addedHeight;
+      isLoadingOlderRef.current = false;
+    }
+  }, [messages, messagesLoading]);
+
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 400);
-    if (!messagesLoading && messagesHasMore && scrollHeight - scrollTop - clientHeight < 200) {
+
+    // Show scroll-to-bottom when not near bottom
+    setShowScrollDown(scrollHeight - scrollTop - clientHeight > 400);
+    // Show scroll-to-top when not near top
+    setShowScrollUp(scrollTop > 400);
+
+    // Load older messages when scrolling near top
+    if (!messagesLoading && messagesHasMore && scrollTop < 200) {
+      isLoadingOlderRef.current = true;
+      prevScrollHeightRef.current = scrollHeight;
       loadMoreMessages();
     }
   }, [messagesLoading, messagesHasMore, loadMoreMessages]);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollToTop = () => {
+    containerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleResume = async () => {
@@ -102,40 +141,55 @@ export function MessagesPage() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto"
       >
+        {/* Loading older indicator at top */}
+        {messagesLoading && messages.length > 0 && messagesHasMore && (
+          <div className="flex items-center justify-center py-4 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            加载更早的消息...
+          </div>
+        )}
+        {!messagesHasMore && messages.length > 0 && (
+          <div className="text-center py-4 text-xs text-muted-foreground">
+            — 会话开始 —
+          </div>
+        )}
         {messagesLoading && messages.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-muted-foreground">
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
             加载消息中...
           </div>
         ) : (
-          <>
-            <MessageThread messages={messages} source={source} />
-            {messagesLoading && messages.length > 0 && (
-              <div className="flex items-center justify-center py-4 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                加载更多...
-              </div>
-            )}
-            {!messagesHasMore && messages.length > 0 && (
-              <div className="text-center py-4 text-xs text-muted-foreground">
-                — 会话结束 —
-              </div>
-            )}
-          </>
+          <MessageThread messages={messages} source={source} />
+        )}
+        {!messagesLoading && messages.length > 0 && (
+          <div className="text-center py-4 text-xs text-muted-foreground">
+            — 会话结束 —
+          </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Scroll to bottom button */}
-      {showScrollBtn && (
-        <button
-          onClick={scrollToBottom}
-          className="absolute bottom-6 right-6 p-2.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-105"
-          title="跳转到底部"
-        >
-          <ArrowDown className="w-4 h-4" />
-        </button>
-      )}
+      {/* Scroll buttons */}
+      <div className="absolute bottom-6 right-6 flex flex-col gap-2">
+        {showScrollUp && (
+          <button
+            onClick={scrollToTop}
+            className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-105"
+            title="跳转到顶部"
+          >
+            <ArrowUp className="w-4 h-4" />
+          </button>
+        )}
+        {showScrollDown && (
+          <button
+            onClick={scrollToBottom}
+            className="p-2.5 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all hover:scale-105"
+            title="跳转到底部"
+          >
+            <ArrowDown className="w-4 h-4" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

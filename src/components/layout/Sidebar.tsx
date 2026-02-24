@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppStore } from "../../stores/appStore";
+import { useTheme } from "../../hooks/useTheme";
 import {
   FolderOpen,
   Search,
@@ -8,6 +9,9 @@ import {
   ChevronRight,
   Bot,
   Terminal,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -15,6 +19,7 @@ export function Sidebar() {
   const location = useLocation();
   const { source, setSource, projects, loadProjects, projectsLoading } =
     useAppStore();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     loadProjects();
@@ -135,8 +140,39 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-3 border-t border-border text-xs text-muted-foreground">
-        {projects.length} 个项目
+      <div className="p-3 border-t border-border flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {projects.length} 个项目
+        </span>
+        <div className="flex rounded-md bg-muted p-0.5">
+          <button
+            onClick={() => setTheme("light")}
+            className={`p-1 rounded transition-colors ${
+              theme === "light" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="亮色模式"
+          >
+            <Sun className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setTheme("system")}
+            className={`p-1 rounded transition-colors ${
+              theme === "system" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="跟随系统"
+          >
+            <Monitor className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => setTheme("dark")}
+            className={`p-1 rounded transition-colors ${
+              theme === "dark" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="暗色模式"
+          >
+            <Moon className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </aside>
   );

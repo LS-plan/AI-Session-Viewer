@@ -11,7 +11,7 @@ export function ToolOutputMessage({ message }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 ml-10 rounded-lg p-3 bg-muted/30 border border-border/30">
       <div className="shrink-0 w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
         <Terminal className="w-3.5 h-3.5 text-amber-500" />
       </div>
