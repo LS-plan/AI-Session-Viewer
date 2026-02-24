@@ -309,6 +309,10 @@ AI-Session-Viewer/
 │       └── watcher/
 │           └── fs_watcher.rs         # 双目录文件系统监听
 │
+├── scripts/                          # 构建辅助脚本（gitignored）
+│   ├── generate-icons.mjs           # 从 public/logo.png 自动生成全平台图标
+│   └── sync-version.mjs             # 同步 package.json 版本号到 Cargo.toml + tauri.conf.json
+│
 ├── .github/workflows/
 │   ├── build.yml                     # CI: cargo check + clippy + tsc
 │   └── release.yml                   # CD: 多平台构建 + GitHub Release
