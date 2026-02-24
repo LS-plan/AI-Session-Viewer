@@ -78,7 +78,9 @@
 | Function Call Output | — | ✅ | 函数调用返回结果 |
 
 - 分页加载，大会话（上千条消息）也不会卡顿
-- 浮动"跳转到底部"按钮
+- 默认从最新消息加载，进入会话直接看到最近对话
+- 向上滚动自动加载更早的消息，滚动位置自动保持
+- 浮动"跳转到顶部/底部"双向按钮
 
 ### Resume Session
 
@@ -335,8 +337,8 @@ npx tauri build
 项目使用 GitHub Actions 自动化构建和发布。创建一个 `v*` 格式的 tag 即可触发多平台构建：
 
 ```bash
-git tag v0.6.1
-git push origin v0.6.1
+git tag v0.7.0
+git push origin v0.7.0
 ```
 
 GitHub Actions 会自动：
@@ -359,7 +361,10 @@ GitHub Actions 会自动：
 - [x] 会话删除
 - [x] **双数据源支持（Claude Code + Codex CLI）**
 - [x] 修复 Ctrl+C 退出会话在列表中丢失的问题
-- [ ] 暗色 / 亮色主题切换
+- [x] 暗色 / 亮色主题切换（Cerulean Flow 青绿色调）
+- [x] 反向加载消息（默认显示最新对话）
+- [x] 内嵌 Inter + JetBrains Mono 字体
+- [x] 消息卡片样式 + 用户消息 Markdown 渲染
 - [ ] 自定义标题栏
 - [ ] 更多 AI CLI 数据源支持（Gemini CLI 等）
 

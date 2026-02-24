@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-02-24
+
+### Added
+
+#### 反向加载消息 — 默认显示最新对话
+- 后端 `get_messages` 新增 `from_end` 参数，支持从末尾分页
+- 进入会话直接看到最新消息，自动滚到底部
+- 向上滚动自动加载更早的消息，加载后保持滚动位置不跳
+- 双向浮动按钮：跳转到顶部 / 跳转到底部，根据位置动态显示
+
+#### 亮色 / 暗色主题切换
+- 新增 Cerulean Flow 青绿色调主题（参考 E-FlowCode docs 配色）
+- 支持三种模式：亮色 / 暗色 / 跟随系统
+- 主题偏好持久化到 localStorage，页面加载无闪烁
+- Sidebar 底部新增主题切换按钮组
+
+#### 内嵌字体
+- 内嵌 Inter（正文）和 JetBrains Mono（代码）woff2 字体
+- 完全离线可用，不依赖 CDN
+
+#### UI 样式优化
+- 用户消息加 `bg-primary/5` 浅色背景卡片
+- AI 消息加细边框卡片样式
+- 工具输出左缩进 + 半透明背景，视觉上作为 AI 消息子级
+- 用户消息支持 Markdown 渲染（行内代码等不再显示原始反引号）
+- Markdown 段落间距优化
+
+---
+
 ## [0.6.1] - 2026-02-10
 
 ### Fixed
@@ -200,10 +229,11 @@ First release of Claude Memory Viewer.
 - **Search**: Rayon parallel brute-force search across all JSONL files
 - **Path Handling**: Cross-platform Claude home detection (`%USERPROFILE%\.claude` on Windows, `~/.claude` on Unix)
 
-[0.6.1]: https://github.com/zuoliangyu/claude-memory-viewer/releases/tag/v0.6.1
-[0.6.0]: https://github.com/zuoliangyu/claude-memory-viewer/releases/tag/v0.6.0
-[0.5.0]: https://github.com/zuoliangyu/claude-memory-viewer/releases/tag/v0.5.0
-[0.4.0]: https://github.com/zuoliangyu/claude-memory-viewer/releases/tag/v0.4.0
-[0.3.0]: https://github.com/zuoliangyu/claude-memory-viewer/releases/tag/v0.3.0
-[0.2.0]: https://github.com/zuoliangyu/claude-memory-viewer/releases/tag/v0.2.0
-[0.1.0]: https://github.com/zuoliangyu/claude-memory-viewer/releases/tag/v0.1.0
+[0.7.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.7.0
+[0.6.1]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.6.1
+[0.6.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.6.0
+[0.5.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.5.0
+[0.4.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.4.0
+[0.3.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.3.0
+[0.2.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.2.0
+[0.1.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.1.0
