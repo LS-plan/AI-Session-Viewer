@@ -8,6 +8,8 @@
     "shell:allow-open",
     "shell:allow-execute",
     "fs:allow-read-text-file",
-    "fs:default"
+    "fs:default",
+    "updater:default",
+    "process:allow-restart"
   ]
 }

@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-02-24
+
+### Added
+
+#### 应用内更新系统（混合模式）
+- **安装版**（MSI/NSIS/DMG/DEB）：集成 `tauri-plugin-updater`，支持应用内一键下载更新并自动重启
+- **便携版**（Windows Portable ZIP）：检测到新版本后引导用户跳转 GitHub Release 页面下载
+- 启动后 5 秒自动检查更新，每次会话仅检查一次
+- Sidebar 底部新增版本号显示，有更新时显示蓝色脉冲圆点动画
+- 点击版本号展开更新面板：显示版本变化、Release Notes、操作按钮
+- 安装版显示"更新并重启"按钮 + 实时下载进度条
+- 便携版显示"前往下载新版本"按钮，打开浏览器跳转 GitHub Release
+- 支持"忽略此版本"功能，忽略后不再提示该版本（记忆到 localStorage）
+- 新增 `get_install_type` Rust 命令：Windows 下检测 exe 同目录是否有 NSIS uninstaller 判断安装类型
+
+#### CI/CD 自动签名
+- Release workflow 注入 `TAURI_SIGNING_PRIVATE_KEY` 签名密钥
+- 构建产物自动生成 `.sig` 签名文件和 `latest.json` 更新清单
+- 旧版客户端可自动发现并验证新版本的完整性
+
+### Changed
+
+#### Sidebar Footer 布局调整
+- 上排：版本号（含更新指示器）+ 主题切换按钮
+- 下排：项目数量统计
+- 原单行布局改为两行，为更新组件腾出空间
+
+---
+
 ## [0.8.0] - 2026-02-24
 
 ### Added
@@ -272,6 +301,7 @@ First release of Claude Memory Viewer.
 - **Search**: Rayon parallel brute-force search across all JSONL files
 - **Path Handling**: Cross-platform Claude home detection (`%USERPROFILE%\.claude` on Windows, `~/.claude` on Unix)
 
+[0.9.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.9.0
 [0.8.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.8.0
 [0.7.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.7.0
 [0.6.1]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v0.6.1

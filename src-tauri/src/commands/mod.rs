@@ -4,3 +4,4 @@ pub mod search;
 pub mod sessions;
 pub mod stats;
 pub mod terminal;
+pub mod updater;

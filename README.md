@@ -114,6 +114,19 @@
 - Token 趋势面积图
 - 按模型分组的 Token 消耗
 
+### Auto Update
+
+应用内自动检测更新，安装版和便携版分别处理：
+
+| 安装方式 | 更新行为 |
+|---------|---------|
+| **安装版** (MSI/NSIS/DMG/DEB) | 应用内一键下载 + 自动安装 + 重启 |
+| **便携版** (Windows Portable ZIP) | 检测到新版后引导跳转 GitHub Release 下载 |
+
+- 启动后自动检查，Sidebar 底部显示版本号 + 更新提示
+- 支持忽略特定版本，不再重复提示
+- 基于 `tauri-plugin-updater` + Ed25519 签名验证，确保更新包完整性
+
 ### Real-time Update
 
 - 使用 `notify` crate 同时监听两个目录的文件系统变化
@@ -134,6 +147,7 @@
 | File Watch | notify 7 (Rust) |
 | Parallel Search | Rayon 1.10 (Rust) |
 | Cache | LRU 0.12 (Rust) |
+| Auto Update | tauri-plugin-updater 2 + tauri-plugin-process 2 (Rust) |
 
 ## Architecture
 
@@ -279,7 +293,8 @@ AI-Session-Viewer/
 │       │   ├── messages.rs           # get_messages(source) - 分页加载消息
 │       │   ├── search.rs             # global_search(source) - 并行搜索
 │       │   ├── stats.rs              # get_token_stats(source) - Token 统计
-│       │   └── terminal.rs           # resume_session(source) - 跨平台终端启动
+│       │   ├── terminal.rs           # resume_session(source) - 跨平台终端启动
+│       │   └── updater.rs            # get_install_type - 检测安装类型
 │       ├── provider/                  # 双数据源提供层
 │       │   ├── claude.rs             # Claude Code 数据解析
 │       │   └── codex.rs              # Codex CLI 数据解析
@@ -317,6 +332,7 @@ AI-Session-Viewer/
 | `get_project_token_stats` | `source, projectId` | `TokenUsageSummary` | 项目 Token 统计 |
 | `resume_session` | `source, sessionId, projectPath, filePath?` | `()` | 终端中恢复会话 |
 | `delete_session` | `filePath` | `()` | 删除会话文件 |
+| `get_install_type` | — | `String` | 检测安装版/便携版 |
 
 ## Build
 
@@ -338,15 +354,16 @@ npx tauri build
 项目使用 GitHub Actions 自动化构建和发布。创建一个 `v*` 格式的 tag 即可触发多平台构建：
 
 ```bash
-git tag v0.8.0
-git push origin v0.8.0
+git tag v0.9.0
+git push origin v0.9.0
 ```
 
 GitHub Actions 会自动：
 
 1. 在 Windows、macOS (Intel + Apple Silicon)、Linux 上并行构建
-2. 生成各平台安装包
-3. 创建 GitHub Release Draft 并上传所有安装包
+2. 生成各平台安装包 + `.sig` 签名文件
+3. 生成 `latest.json` 更新清单（供旧版客户端检测新版本）
+4. 创建 GitHub Release 并上传所有产物
 
 ## Roadmap
 
@@ -368,6 +385,7 @@ GitHub Actions 会自动：
 - [x] 消息卡片样式 + 用户消息 Markdown 渲染
 - [x] 聊天气泡式消息布局
 - [x] 消息显示模型名称 + 时间戳/模型切换按钮
+- [x] 应用内自动更新（安装版自动安装 / 便携版引导下载）
 - [ ] 自定义标题栏
 - [ ] 更多 AI CLI 数据源支持（Gemini CLI 等）
 

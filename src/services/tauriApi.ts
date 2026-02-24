@@ -58,3 +58,7 @@ export async function resumeSession(
 ): Promise<void> {
   return invoke<void>("resume_session", { source, sessionId, projectPath, filePath });
 }
+
+export async function getInstallType(): Promise<"installed" | "portable"> {
+  return invoke<"installed" | "portable">("get_install_type");
+}
