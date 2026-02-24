@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] - 2026-02-24
+
+### Fixed
+
+#### Docker 环境下项目列表"加载中"持续闪烁
+- **根因**: Docker 挂载卷的 inotify 会频繁触发文件变化事件，每次事件通过 WebSocket 推送到前端后调用 `loadProjects()` 和 `selectProject()`，这两个函数都会设置 loading 状态并清空已有数据，导致"加载中"反复闪烁
+- **修复**: 新增 `refreshInBackground()` 静默刷新方法，文件变化时仅更新数据而不触发 loading 状态；同时将前后端防抖时间从 300ms/500ms 统一提升至 1000ms，减少 Docker 环境下的事件风暴
+
+---
+
 ## [1.3.0] - 2026-02-24
 
 ### Added
@@ -379,6 +389,7 @@ First release of Claude Memory Viewer.
 - **Search**: Rayon parallel brute-force search across all JSONL files
 - **Path Handling**: Cross-platform Claude home detection (`%USERPROFILE%\.claude` on Windows, `~/.claude` on Unix)
 
+[1.3.1]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.3.1
 [1.3.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.3.0
 [1.1.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.1.0
 [1.0.1]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.0.1

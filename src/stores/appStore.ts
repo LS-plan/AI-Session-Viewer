@@ -54,6 +54,8 @@ interface AppState {
   search: (query: string) => Promise<void>;
   loadStats: () => Promise<void>;
   clearSelection: () => void;
+  /** Silently refresh projects and current session list without loading states */
+  refreshInBackground: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -236,5 +238,27 @@ export const useAppStore = create<AppState>((set, get) => ({
       sessions: [],
       messages: [],
     });
+  },
+
+  refreshInBackground: async () => {
+    const { source, selectedProject } = get();
+    try {
+      const projects = await api.getProjects(source);
+      set({ projects });
+
+      if (selectedProject) {
+        const sessions = await api.getSessions(source, selectedProject);
+        set((state) => ({
+          sessions,
+          projects: state.projects.map((p) =>
+            p.id === selectedProject
+              ? { ...p, sessionCount: sessions.length }
+              : p
+          ),
+        }));
+      }
+    } catch (e) {
+      console.error("Background refresh failed:", e);
+    }
   },
 }));

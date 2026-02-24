@@ -6,7 +6,9 @@ use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
 
 /// Minimum interval between sending file change events.
-const DEBOUNCE_DURATION: Duration = Duration::from_millis(300);
+/// Docker volume mounts can produce frequent inotify events,
+/// so use a longer debounce to avoid flooding clients.
+const DEBOUNCE_DURATION: Duration = Duration::from_millis(1000);
 
 use session_core::parser::path_encoder::get_projects_dir;
 use session_core::provider::codex;

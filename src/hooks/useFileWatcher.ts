@@ -14,16 +14,14 @@ export function useFileWatcher() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const { loadProjects, selectProject } = useAppStore();
+  const { refreshInBackground } = useAppStore();
 
   const handleChange = useCallback(() => {
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      loadProjects();
-      const project = useAppStore.getState().selectedProject;
-      if (project) selectProject(project);
-    }, 500);
-  }, [loadProjects, selectProject]);
+      refreshInBackground();
+    }, 1000);
+  }, [refreshInBackground]);
 
   useEffect(() => {
     if (__IS_TAURI__) {
