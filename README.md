@@ -30,7 +30,7 @@
 
 本应用**只读取本地文件**，不联网、不上传任何数据。
 
-## Screenshots
+## 截图
 
 ![图片](./img/1.png)
 ![图片](./img/2.png)
@@ -39,9 +39,9 @@
 ![图片](./img/5.png)
 ![图片](./img/6.png)
 
-## Features
+## 功能特性
 
-### Dual Data Source
+### 双数据源
 
 通过侧边栏顶部的 Tab 一键切换 Claude / Codex 数据源：
 
@@ -52,7 +52,7 @@
 
 切换时自动清理状态并重新加载，互不干扰。
 
-### Project Browser
+### 项目浏览
 
 - 自动扫描对应数据源目录，列出所有项目
 - Claude：按 `~/.claude/projects/{encoded-path}` 聚合
@@ -60,26 +60,26 @@
 - 显示每个项目的会话数量、最后活跃时间
 - 按最近活跃时间排序
 
-### Session List
+### 会话列表
 
 - Claude：读取 `sessions-index.json` 索引文件并与磁盘 `.jsonl` 文件合并，确保 Ctrl+C 退出的会话不会丢失
 - Codex：扫描 `~/.codex/sessions/` 目录下所有 `rollout-*.jsonl` 文件，提取元数据
 - 展示每个会话的首条 Prompt、消息数量、Git 分支、创建/修改时间
 - 支持删除会话（带确认弹窗）
 
-### Message Detail
+### 消息详情
 
 完整渲染会话中的所有消息，支持两种 AI 的不同内容块格式：
 
 | 内容块类型 | Claude | Codex | 说明 |
 |-----------|--------|-------|------|
-| Text | ✅ | ✅ | Markdown 渲染 + 语法高亮 |
-| Thinking | ✅ | — | Claude 思考过程，可折叠 |
-| Reasoning | — | ✅ | Codex 推理过程，可折叠 |
-| Tool Use | ✅ | — | 工具调用名称、参数、返回结果 |
-| Tool Result | ✅ | — | 工具返回结果 |
-| Function Call | — | ✅ | Codex 函数调用 |
-| Function Call Output | — | ✅ | 函数调用返回结果 |
+| 文本 | ✅ | ✅ | Markdown 渲染 + 语法高亮 |
+| 思考过程 | ✅ | — | Claude Thinking 块，可折叠 |
+| 推理过程 | — | ✅ | Codex Reasoning 块，可折叠 |
+| 工具调用 | ✅ | — | 工具名称、参数、返回结果 |
+| 工具结果 | ✅ | — | 工具返回结果 |
+| 函数调用 | — | ✅ | Codex 函数调用 |
+| 函数返回 | — | ✅ | 函数调用返回结果 |
 
 - 分页加载，大会话（上千条消息）也不会卡顿
 - 默认从最新消息加载，进入会话直接看到最近对话
@@ -87,7 +87,7 @@
 - 浮动"跳转到顶部/底部"双向按钮
 - 时间戳 / 模型标签可切换显示，偏好持久化
 
-### Resume Session
+### 恢复会话
 
 选中任意会话，一键在系统终端中恢复：
 
@@ -102,14 +102,14 @@
 | macOS | AppleScript 调用 Terminal.app |
 | Linux | 自动检测 gnome-terminal / konsole / xfce4-terminal / xterm，`setsid` 脱离父进程 |
 
-### Global Search
+### 全局搜索
 
 - 在当前数据源下跨所有项目、所有会话全文搜索
 - 基于 Rayon 并行扫描 JSONL 文件
 - UTF-8 安全的字符级切片，中文/emoji 不会崩溃
 - 关键词高亮，点击结果直接跳转到对应消息
 
-### Token Statistics
+### Token 统计
 
 - Claude：读取 `stats-cache.json` 统计缓存
 - Codex：从每个会话文件提取 `usage` 字段聚合
@@ -118,7 +118,7 @@
 - Token 趋势面积图
 - 按模型分组的 Token 消耗
 
-### Auto Update
+### 应用内更新
 
 应用内自动检测更新，安装版和便携版分别处理：
 
@@ -132,32 +132,32 @@
 - 支持忽略特定版本，不再重复提示
 - 基于 `tauri-plugin-updater` + Ed25519 签名验证，确保更新包完整性
 
-### Real-time Update
+### 实时刷新
 
 - 使用 `notify` crate 同时监听两个目录的文件系统变化
 - 新会话创建、会话更新时自动刷新界面
 
-## Tech Stack
+## 技术栈
 
-| Layer | Technology |
-|-------|-----------|
-| Desktop Framework | [Tauri v2](https://v2.tauri.app/) (Rust + WebView) |
-| Web Server | [Axum](https://github.com/tokio-rs/axum) 0.8 + WebSocket |
-| Frontend | React 19 + TypeScript + Vite 6 |
-| Styling | Tailwind CSS 3 + @tailwindcss/typography |
-| State | Zustand 5 |
+| 层级 | 技术 |
+|------|------|
+| 桌面框架 | [Tauri v2](https://v2.tauri.app/) (Rust + WebView) |
+| Web 服务器 | [Axum](https://github.com/tokio-rs/axum) 0.8 + WebSocket |
+| 前端 | React 19 + TypeScript + Vite 6 |
+| 样式 | Tailwind CSS 3 + @tailwindcss/typography |
+| 状态管理 | Zustand 5 |
 | Markdown | react-markdown 9 + remark-gfm + react-syntax-highlighter |
-| Charts | Recharts 2 |
-| Icons | Lucide React |
-| Date | date-fns 4 |
-| Shared Core | session-core (Rust crate，models/provider/search/stats) |
-| File Watch | notify 7 (Rust) |
-| Parallel Search | Rayon 1.10 (Rust) |
-| Cache | LRU 0.12 (Rust) |
-| Static Embed | rust-embed 8 (Web 模式嵌入前端到二进制) |
-| Auto Update | tauri-plugin-updater 2 + tauri-plugin-process 2 (Rust) |
+| 图表 | Recharts 2 |
+| 图标 | Lucide React |
+| 日期 | date-fns 4 |
+| 共享核心 | session-core（Rust crate，models/provider/search/stats） |
+| 文件监听 | notify 7 (Rust) |
+| 并行搜索 | Rayon 1.10 (Rust) |
+| 缓存 | LRU 0.12 (Rust) |
+| 静态嵌入 | rust-embed 8（Web 模式将前端嵌入二进制） |
+| 自动更新 | tauri-plugin-updater 2 + tauri-plugin-process 2 (Rust) |
 
-## Architecture
+## 架构
 
 ```
               React 前端（100% 复用）
@@ -191,7 +191,7 @@
 
 前端通过编译时变量 `__IS_TAURI__` 自动切换 API 层（Tauri invoke vs HTTP fetch），组件代码 100% 复用。
 
-## Data Source
+## 数据源
 
 ### Claude Code
 
@@ -219,7 +219,7 @@
             # 后续行: response_item (message/function_call/function_call_output)
 ```
 
-## Prerequisites
+## 前置要求
 
 - [Node.js](https://nodejs.org/) >= 18
 - [Rust](https://www.rust-lang.org/tools/install) >= 1.75
@@ -227,7 +227,7 @@
   - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)（`~/.claude/projects/` 目录存在）
   - [Codex CLI](https://github.com/openai/codex)（`~/.codex/sessions/` 目录存在）
 
-### Platform-specific（仅桌面应用需要）
+### 平台依赖（仅桌面应用需要）
 
 **Windows:**
 - [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
@@ -243,7 +243,7 @@ sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchel
 
 > **注意**: Web 服务器版本不需要上述 WebKit/GUI 依赖，只需 Rust 工具链。
 
-## Development
+## 开发
 
 ```bash
 # 克隆仓库
@@ -256,14 +256,13 @@ npm install
 # 桌面应用开发（Tauri + Vite HMR）
 npx tauri dev
 
-# Web 服务器开发
-npm run build:web          # 构建前端（Web 模式）
-cargo run -p session-web   # 启动 Axum 服务器，访问 http://localhost:3000
+# Web 服务器开发（一行命令）
+npm run dev:web
 ```
 
 > **注意**: 桌面应用不能只运行 `npm run dev`，那只会启动 Vite 前端。必须用 `npx tauri dev` 才能同时编译 Rust 后端并启动完整应用。
 
-### Project Structure
+### 项目结构
 
 ```
 AI-Session-Viewer/
@@ -298,15 +297,15 @@ AI-Session-Viewer/
 │           ├── ws.rs                 # WebSocket 文件变更推送
 │           └── static_files.rs       # rust-embed 嵌入前端
 │
-├── src/                              # Frontend (React + TypeScript)
+├── src/                              # 前端（React + TypeScript）
 │   ├── App.tsx                       # 路由配置
 │   ├── components/
-│   │   ├── layout/                   # AppLayout, Sidebar
-│   │   ├── project/                  # ProjectsPage
-│   │   ├── session/                  # SessionsPage
-│   │   ├── message/                  # MessagesPage, MessageThread
-│   │   ├── search/                   # SearchPage
-│   │   └── stats/                    # StatsPage
+│   │   ├── layout/                   # AppLayout、Sidebar
+│   │   ├── project/                  # ProjectsPage - 项目列表
+│   │   ├── session/                  # SessionsPage - 会话列表
+│   │   ├── message/                  # MessagesPage、MessageThread
+│   │   ├── search/                   # SearchPage - 全局搜索
+│   │   └── stats/                    # StatsPage - 统计面板
 │   ├── stores/appStore.ts            # Zustand 全局状态
 │   ├── services/
 │   │   ├── api.ts                    # 统一 API 入口（自动切换）
@@ -329,8 +328,8 @@ AI-Session-Viewer/
 │
 ├── Dockerfile                        # Web 服务器 Docker 镜像
 ├── .github/workflows/
-│   ├── build.yml                     # CI: Tauri + Web 双重检查
-│   └── release.yml                   # CD: 多平台桌面 + Web + Docker
+│   ├── build.yml                     # CI：Tauri + Web 双重检查
+│   └── release.yml                   # CD：多平台桌面 + Web + Docker
 │
 ├── package.json
 ├── vite.config.ts
@@ -338,12 +337,12 @@ AI-Session-Viewer/
 └── tsconfig.json
 ```
 
-### Tauri Commands API
+### Tauri 命令 API
 
 所有命令通过 `source` 参数区分数据源，由命令层调度到对应的 provider：
 
-| Command | Parameters | Returns | Description |
-|---------|-----------|---------|-------------|
+| 命令 | 参数 | 返回值 | 说明 |
+|------|------|--------|------|
 | `get_projects` | `source` | `ProjectEntry[]` | 扫描指定数据源的所有项目 |
 | `get_sessions` | `source, projectId` | `SessionIndexEntry[]` | 获取项目会话列表 |
 | `get_messages` | `source, filePath, page, pageSize` | `PaginatedMessages` | 分页加载消息 |
@@ -354,7 +353,7 @@ AI-Session-Viewer/
 | `delete_session` | `filePath` | `()` | 删除会话文件 |
 | `get_install_type` | — | `String` | 检测安装版/便携版 |
 
-## Build
+## 构建
 
 ### 桌面应用
 
@@ -364,9 +363,9 @@ npx tauri build
 
 构建产物位于 `target/release/bundle/`：
 
-| Platform | Output |
-|----------|--------|
-| Windows | `.msi` + `.exe` (NSIS installer) + portable `.zip` |
+| 平台 | 产物 |
+|------|------|
+| Windows | `.msi` + `.exe`（NSIS 安装器）+ 便携版 `.zip` |
 | macOS | `.dmg` + `.app` |
 | Linux | `.deb` + `.AppImage` |
 
@@ -385,7 +384,7 @@ cargo build -p session-web --release   # 构建后端（内嵌前端）
 docker build -t ai-session-viewer-web .
 ```
 
-## Web Server Usage
+## Web 服务器使用
 
 Web 服务器适合无 GUI 的服务器环境，通过浏览器远程访问会话数据。
 
@@ -431,7 +430,7 @@ docker run -p 3000:3000 \
 
 | 功能 | 桌面应用 | Web 服务器 |
 |------|---------|-----------|
-| Resume 会话 | 打开系统终端 | 复制命令到剪贴板 |
+| 恢复会话 | 打开系统终端 | 复制命令到剪贴板 |
 | 自动更新 | 应用内更新 | 不适用 |
 | 文件监听 | Tauri 事件 | WebSocket 推送 |
 | 认证 | 不需要 | 可选 Bearer Token |
@@ -450,7 +449,7 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 | GET | `/api/stats` | `source` | Token 统计 |
 | WS | `/ws` | — | 文件变更实时推送 |
 
-## Release
+## 发布
 
 项目使用 GitHub Actions 自动化构建和发布。创建一个 `v*` 格式的 tag 即可触发多平台构建：
 
@@ -461,12 +460,12 @@ git push origin v1.0.0
 
 GitHub Actions 会自动：
 
-1. 在 Windows、macOS (Intel + Apple Silicon)、Linux 上并行构建桌面应用
+1. 在 Windows、macOS（Intel + Apple Silicon）、Linux 上并行构建桌面应用
 2. 构建 Web 服务器 Linux 二进制 + Docker 镜像（推送到 GHCR）
 3. 生成各平台安装包 + `.sig` 签名文件 + `latest.json` 更新清单
 4. 创建 GitHub Release 并上传所有产物
 
-## Roadmap
+## 路线图
 
 - [x] 项目骨架搭建（Tauri v2 + React + Vite + Tailwind）
 - [x] 项目列表浏览
@@ -491,7 +490,7 @@ GitHub Actions 会自动：
 - [ ] 自定义标题栏
 - [ ] 更多 AI CLI 数据源支持（Gemini CLI 等）
 
-## Contributing
+## 贡献
 
 欢迎提交 Issue 和 Pull Request。
 
@@ -501,6 +500,6 @@ cargo clippy --workspace -- -D warnings        # Rust lint（全 workspace）
 npx tsc --noEmit                               # TypeScript 类型检查
 ```
 
-## License
+## 许可证
 
 [MIT](LICENSE)
