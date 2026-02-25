@@ -2,6 +2,7 @@ use rayon::prelude::*;
 use serde::Serialize;
 use std::fs;
 
+use crate::metadata;
 use crate::models::message::DisplayContentBlock;
 use crate::provider::{claude, codex};
 
@@ -13,6 +14,8 @@ pub struct SearchResult {
     pub project_name: String,
     pub session_id: String,
     pub first_prompt: Option<String>,
+    pub alias: Option<String>,
+    pub tags: Option<Vec<String>>,
     pub matched_text: String,
     pub role: String,
     pub timestamp: Option<String>,
@@ -84,6 +87,15 @@ pub fn global_search(
 fn search_claude(query_lower: &str, max_results: usize) -> Vec<SearchResult> {
     let jsonl_files = claude::collect_all_jsonl_files();
 
+    // Pre-load metadata per project for alias lookup
+    let mut meta_cache: std::collections::HashMap<String, metadata::MetadataFile> =
+        std::collections::HashMap::new();
+    for (encoded_name, _, _) in &jsonl_files {
+        meta_cache
+            .entry(encoded_name.clone())
+            .or_insert_with(|| metadata::load_metadata("claude", encoded_name));
+    }
+
     let results: Vec<SearchResult> = jsonl_files
         .par_iter()
         .flat_map(|(encoded_name, project_name, file_path)| {
@@ -103,6 +115,15 @@ fn search_claude(query_lower: &str, max_results: usize) -> Vec<SearchResult> {
             if !content.to_lowercase().contains(query_lower) {
                 return file_results;
             }
+
+            // Lookup alias and tags from metadata
+            let session_meta = meta_cache
+                .get(encoded_name)
+                .and_then(|m| m.sessions.get(&session_id));
+            let alias = session_meta.and_then(|s| s.alias.clone());
+            let tags = session_meta
+                .map(|s| s.tags.clone())
+                .filter(|t| !t.is_empty());
 
             if let Ok(messages) = claude::parse_all_messages(file_path) {
                 let mut first_prompt = None;
@@ -128,6 +149,8 @@ fn search_claude(query_lower: &str, max_results: usize) -> Vec<SearchResult> {
                                 project_name: project_name.clone(),
                                 session_id: session_id.clone(),
                                 first_prompt: first_prompt.clone(),
+                                alias: alias.clone(),
+                                tags: tags.clone(),
                                 matched_text,
                                 role: msg.role.clone(),
                                 timestamp: msg.timestamp.clone(),
@@ -153,6 +176,9 @@ fn search_claude(query_lower: &str, max_results: usize) -> Vec<SearchResult> {
 
 fn search_codex(query_lower: &str, max_results: usize) -> Vec<SearchResult> {
     let files = codex::scan_all_session_files();
+
+    // Pre-load codex metadata (single file for all sessions)
+    let codex_meta = metadata::load_metadata("codex", "");
 
     let results: Vec<SearchResult> = files
         .par_iter()
@@ -186,6 +212,12 @@ fn search_codex(query_lower: &str, max_results: usize) -> Vec<SearchResult> {
                 .unwrap_or(&cwd)
                 .to_string();
 
+            let session_meta = codex_meta.sessions.get(&session_id);
+            let alias = session_meta.and_then(|s| s.alias.clone());
+            let tags = session_meta
+                .map(|s| s.tags.clone())
+                .filter(|t| !t.is_empty());
+
             if let Ok(messages) = codex::parse_all_messages(file_path) {
                 let mut first_prompt = None;
                 for msg in &messages {
@@ -210,6 +242,8 @@ fn search_codex(query_lower: &str, max_results: usize) -> Vec<SearchResult> {
                                 project_name: short_name.clone(),
                                 session_id: session_id.clone(),
                                 first_prompt: first_prompt.clone(),
+                                alias: alias.clone(),
+                                tags: tags.clone(),
                                 matched_text,
                                 role: msg.role.clone(),
                                 timestamp: msg.timestamp.clone(),

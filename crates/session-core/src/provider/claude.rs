@@ -31,29 +31,54 @@ pub fn get_projects() -> Result<Vec<ProjectEntry>, String> {
             None => continue,
         };
 
-        // Prefer originalPath from sessions-index.json for accurate display
-        let display_path = {
-            let index_path = path.join("sessions-index.json");
-            fs::read_to_string(&index_path)
-                .ok()
-                .and_then(|c| serde_json::from_str::<SessionsIndex>(&c).ok())
-                .and_then(|idx| idx.original_path)
-                .unwrap_or_else(|| decode_project_path(&encoded_name))
-        };
+        // Read sessions-index.json for display path and accurate session count
+        let index_path = path.join("sessions-index.json");
+        let parsed_index = fs::read_to_string(&index_path)
+            .ok()
+            .and_then(|c| serde_json::from_str::<SessionsIndex>(&c).ok());
+
+        let display_path = parsed_index
+            .as_ref()
+            .and_then(|idx| idx.original_path.clone())
+            .unwrap_or_else(|| decode_project_path(&encoded_name));
         let short_name = short_name_from_path(&display_path);
 
-        let session_count = fs::read_dir(&path)
-            .map(|rd| {
-                rd.flatten()
-                    .filter(|e| {
-                        e.path()
-                            .extension()
-                            .map(|ext| ext == "jsonl")
-                            .unwrap_or(false)
+        // Count sessions consistently with get_sessions(): only those with messages
+        let session_count = if let Some(ref index) = parsed_index {
+            if !index.entries.is_empty() {
+                // From index: count entries where message_count > 0 (or unknown)
+                let indexed_ids: std::collections::HashSet<&str> =
+                    index.entries.iter().map(|e| e.session_id.as_str()).collect();
+                let indexed_count = index
+                    .entries
+                    .iter()
+                    .filter(|e| e.message_count.map(|c| c > 0).unwrap_or(true))
+                    .count();
+                // Also count disk-only files not in index (non-empty)
+                let extra = fs::read_dir(&path)
+                    .map(|rd| {
+                        rd.flatten()
+                            .filter(|e| {
+                                let p = e.path();
+                                p.extension().map(|ext| ext == "jsonl").unwrap_or(false)
+                                    && p.file_stem()
+                                        .and_then(|s| s.to_str())
+                                        .map(|id| !indexed_ids.contains(id))
+                                        .unwrap_or(false)
+                                    && e.metadata().map(|m| m.len() > 0).unwrap_or(false)
+                            })
+                            .count()
                     })
-                    .count()
-            })
-            .unwrap_or(0);
+                    .unwrap_or(0);
+                indexed_count + extra
+            } else {
+                // Empty index, fall back to counting all .jsonl files
+                count_jsonl_files(&path)
+            }
+        } else {
+            // No index file, fall back to counting all .jsonl files
+            count_jsonl_files(&path)
+        };
 
         let last_modified = fs::metadata(&path)
             .and_then(|m| m.modified())
@@ -243,6 +268,8 @@ fn convert_index_entry(e: SessionsIndexFileEntry, project_dir: &std::path::Path)
         cwd: None,
         model_provider: None,
         cli_version: None,
+        alias: None,
+        tags: None,
     }
 }
 
@@ -319,7 +346,25 @@ fn scan_single_session(path: &std::path::Path, session_id: &str) -> Option<Sessi
         cwd: None,
         model_provider: None,
         cli_version: None,
+        alias: None,
+        tags: None,
     })
+}
+
+/// Count all .jsonl files in a directory (fallback when no sessions-index.json)
+fn count_jsonl_files(dir: &std::path::Path) -> usize {
+    fs::read_dir(dir)
+        .map(|rd| {
+            rd.flatten()
+                .filter(|e| {
+                    e.path()
+                        .extension()
+                        .map(|ext| ext == "jsonl")
+                        .unwrap_or(false)
+                })
+                .count()
+        })
+        .unwrap_or(0)
 }
 
 fn count_messages(path: &std::path::Path) -> u32 {

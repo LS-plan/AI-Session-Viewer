@@ -45,17 +45,34 @@ interface AppState {
   tokenSummary: TokenUsageSummary | null;
   statsLoading: boolean;
 
+  // Tags
+  allTags: string[];
+  tagFilter: string[];
+
+  // Cross-project tags
+  crossProjectTags: Record<string, string[]>;
+  globalTagFilter: string[];
+
   // Actions
   loadProjects: () => Promise<void>;
   selectProject: (projectId: string) => Promise<void>;
   selectSession: (filePath: string) => Promise<void>;
-  deleteSession: (filePath: string) => Promise<void>;
+  deleteSession: (filePath: string, sessionId?: string) => Promise<void>;
   loadMoreMessages: () => Promise<void>;
   search: (query: string) => Promise<void>;
   loadStats: () => Promise<void>;
   clearSelection: () => void;
   /** Silently refresh projects and current session list without loading states */
   refreshInBackground: () => Promise<void>;
+  updateSessionMeta: (
+    sessionId: string,
+    alias: string | null,
+    tags: string[]
+  ) => Promise<void>;
+  loadAllTags: () => Promise<void>;
+  setTagFilter: (tags: string[]) => void;
+  loadCrossProjectTags: () => Promise<void>;
+  setGlobalTagFilter: (tags: string[]) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -71,6 +88,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       searchResults: [],
       searchQuery: "",
       tokenSummary: null,
+      allTags: [],
+      tagFilter: [],
+      crossProjectTags: {},
+      globalTagFilter: [],
     });
   },
 
@@ -108,6 +129,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   tokenSummary: null,
   statsLoading: false,
 
+  allTags: [],
+  tagFilter: [],
+
+  crossProjectTags: {},
+  globalTagFilter: [],
+
   loadProjects: async () => {
     set({ projectsLoading: true });
     try {
@@ -127,6 +154,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       messages: [],
       messagesTotal: 0,
       messagesPage: 0,
+      tagFilter: [],
     });
     try {
       const sessions = await api.getSessions(get().source, projectId);
@@ -137,6 +165,8 @@ export const useAppStore = create<AppState>((set, get) => ({
           p.id === projectId ? { ...p, sessionCount: sessions.length } : p
         ),
       }));
+      // Load all tags for this project
+      get().loadAllTags();
     } catch (e) {
       console.error("Failed to load sessions:", e);
       set({ sessionsLoading: false });
@@ -166,8 +196,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  deleteSession: async (filePath: string) => {
-    await api.deleteSession(filePath);
+  deleteSession: async (filePath: string, sessionId?: string) => {
+    const { source, selectedProject } = get();
+    await api.deleteSession(filePath, source, selectedProject || undefined, sessionId);
     set((state) => ({
       sessions: state.sessions.filter((s) => s.filePath !== filePath),
     }));
@@ -244,21 +275,72 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { source, selectedProject } = get();
     try {
       const projects = await api.getProjects(source);
-      set({ projects });
 
       if (selectedProject) {
+        // Fetch sessions first, then update projects + sessions atomically
+        // to avoid sessionCount flashing between raw file count and filtered count
         const sessions = await api.getSessions(source, selectedProject);
-        set((state) => ({
+        set({
           sessions,
-          projects: state.projects.map((p) =>
+          projects: projects.map((p) =>
             p.id === selectedProject
               ? { ...p, sessionCount: sessions.length }
               : p
           ),
-        }));
+        });
+      } else {
+        set({ projects });
       }
     } catch (e) {
       console.error("Background refresh failed:", e);
     }
+  },
+
+  updateSessionMeta: async (
+    sessionId: string,
+    alias: string | null,
+    tags: string[]
+  ) => {
+    const { source, selectedProject } = get();
+    if (!selectedProject) return;
+    await api.updateSessionMeta(source, selectedProject, sessionId, alias, tags);
+    // Update local state
+    set((state) => ({
+      sessions: state.sessions.map((s) =>
+        s.sessionId === sessionId
+          ? { ...s, alias, tags: tags.length > 0 ? tags : null }
+          : s
+      ),
+    }));
+    // Refresh tags
+    get().loadAllTags();
+  },
+
+  loadAllTags: async () => {
+    const { source, selectedProject } = get();
+    if (!selectedProject) return;
+    try {
+      const allTags = await api.getAllTags(source, selectedProject);
+      set({ allTags });
+    } catch (e) {
+      console.error("Failed to load tags:", e);
+    }
+  },
+
+  setTagFilter: (tags: string[]) => {
+    set({ tagFilter: tags });
+  },
+
+  loadCrossProjectTags: async () => {
+    try {
+      const crossProjectTags = await api.getCrossProjectTags(get().source);
+      set({ crossProjectTags });
+    } catch (e) {
+      console.error("Failed to load cross-project tags:", e);
+    }
+  },
+
+  setGlobalTagFilter: (tags: string[]) => {
+    set({ globalTagFilter: tags });
   },
 }));

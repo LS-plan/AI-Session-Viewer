@@ -250,6 +250,8 @@ fn list_all_sessions() -> Result<Vec<SessionIndexEntry>, String> {
             cwd: Some(cwd),
             model_provider,
             cli_version,
+            alias: None,
+            tags: None,
         });
     }
 

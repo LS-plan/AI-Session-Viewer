@@ -127,6 +127,15 @@ docker compose up
 - 展示每个会话的首条 Prompt、消息数量、Git 分支、创建/修改时间
 - 支持删除会话（带确认弹窗）
 
+### 标签与别名
+
+- 为任意会话设置**自定义别名**（替代首条 Prompt 作为标题）和**多个标签**
+- 标签数据存储在 `.session-viewer-meta.json`，不侵入原始会话文件
+- **项目列表页**：按标签筛选项目——只显示拥有匹配标签的项目
+- **会话列表页**：按标签筛选当前项目内的会话
+- **搜索结果页**：按标签筛选全局搜索结果
+- 标签输入支持已有标签自动补全
+
 ### 消息详情
 
 完整渲染会话中的所有消息，支持两种 AI 的不同内容块格式：
@@ -322,6 +331,9 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 | GET | `/api/messages` | `source, filePath, page, pageSize, fromEnd` | 分页加载消息 |
 | GET | `/api/search` | `source, query, maxResults` | 全局搜索 |
 | GET | `/api/stats` | `source` | Token 统计 |
+| PUT | `/api/sessions/meta` | *(JSON body)* | 更新会话别名和标签 |
+| GET | `/api/tags` | `source, projectId` | 获取项目内所有标签 |
+| GET | `/api/cross-tags` | `source` | 获取跨项目全局标签 |
 | WS | `/ws` | — | 文件变更实时推送 |
 
 ## 发布
@@ -345,6 +357,7 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 - [x] 应用内自动更新
 - [x] Web 服务器变体（Axum + Docker）
 - [x] 关于作者信息弹窗
+- [x] 会话标签与别名系统 + 跨项目标签筛选
 - [ ] 自定义标题栏
 - [ ] 更多 AI CLI 数据源支持（Gemini CLI 等）
 

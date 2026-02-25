@@ -1,3 +1,4 @@
+pub mod metadata;
 pub mod models;
 pub mod parser;
 pub mod provider;

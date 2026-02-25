@@ -46,8 +46,47 @@ export async function getStats(source: string): Promise<TokenUsageSummary> {
   return invoke<TokenUsageSummary>("get_stats", { source });
 }
 
-export async function deleteSession(filePath: string): Promise<void> {
-  return invoke<void>("delete_session", { filePath });
+export async function deleteSession(
+  filePath: string,
+  source?: string,
+  projectId?: string,
+  sessionId?: string
+): Promise<void> {
+  return invoke<void>("delete_session", {
+    filePath,
+    source: source || "",
+    projectId: projectId || "",
+    sessionId: sessionId || "",
+  });
+}
+
+export async function updateSessionMeta(
+  source: string,
+  projectId: string,
+  sessionId: string,
+  alias: string | null,
+  tags: string[]
+): Promise<void> {
+  return invoke<void>("update_session_meta", {
+    source,
+    projectId,
+    sessionId,
+    alias,
+    tags,
+  });
+}
+
+export async function getAllTags(
+  source: string,
+  projectId: string
+): Promise<string[]> {
+  return invoke<string[]>("get_all_tags", { source, projectId });
+}
+
+export async function getCrossProjectTags(
+  source: string
+): Promise<Record<string, string[]>> {
+  return invoke<Record<string, string[]>>("get_cross_project_tags", { source });
 }
 
 export async function resumeSession(

@@ -108,8 +108,66 @@ export async function getStats(source: string): Promise<TokenUsageSummary> {
   return apiFetch("/api/stats", { source });
 }
 
-export async function deleteSession(filePath: string): Promise<void> {
-  await apiDelete("/api/sessions", { filePath });
+export async function deleteSession(
+  filePath: string,
+  source?: string,
+  projectId?: string,
+  sessionId?: string
+): Promise<void> {
+  const params: Record<string, string> = { filePath };
+  if (source) params.source = source;
+  if (projectId) params.projectId = projectId;
+  if (sessionId) params.sessionId = sessionId;
+  await apiDelete("/api/sessions", params);
+}
+
+async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const resp = await fetch(new URL(path, window.location.origin).toString(), {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (resp.status === 401) {
+    window.dispatchEvent(new CustomEvent("asv-auth-required"));
+    throw new Error("Authentication required");
+  }
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || resp.statusText);
+  }
+
+  return resp.json();
+}
+
+export async function updateSessionMeta(
+  source: string,
+  projectId: string,
+  sessionId: string,
+  alias: string | null,
+  tags: string[]
+): Promise<void> {
+  await apiPut("/api/sessions/meta", { source, projectId, sessionId, alias, tags });
+}
+
+export async function getAllTags(
+  source: string,
+  projectId: string
+): Promise<string[]> {
+  return apiFetch("/api/tags", { source, projectId });
+}
+
+export async function getCrossProjectTags(
+  source: string
+): Promise<Record<string, string[]>> {
+  return apiFetch("/api/cross-tags", { source });
 }
 
 // Web mode: resume not available, use clipboard instead

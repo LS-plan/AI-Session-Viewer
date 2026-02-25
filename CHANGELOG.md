@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-02-25
+
+### Added
+
+#### 会话标签与别名系统
+- 新增 `metadata.rs` 模块，每个项目的标签和别名持久化存储在 `.session-viewer-meta.json` 文件中
+- 会话列表页（SessionsPage）支持为每个会话设置自定义别名和多个标签
+- 新增 `SessionMetaEditor` 组件：弹窗编辑器，支持别名输入、标签管理（添加/删除）、已有标签自动补全
+- 会话卡片显示标签 pill 和别名（别名替代首条 Prompt 作为标题，原 Prompt 显示为副标题）
+- 消息详情页（MessagesPage）标题优先显示别名
+- 文件监听器忽略 `.session-viewer-meta.json` 变更，避免编辑标签触发无限刷新
+
+#### 跨项目标签筛选
+- 新增 `get_all_cross_project_tags(source)` 后端接口，遍历所有项目收集去重标签
+- 项目列表页（ProjectsPage）标题下方新增全局标签筛选栏，按标签过滤项目（仅显示拥有匹配标签的项目）
+- 项目卡片显示该项目的标签 pill
+- 搜索结果页（SearchPage）搜索框下方新增标签筛选栏，按标签过滤搜索结果
+- 搜索结果 `SearchResult` 新增 `tags` 字段，搜索结果卡片显示标签 pill
+- 会话列表页（SessionsPage）支持按标签筛选当前项目内的会话
+- 切换数据源时自动清空所有标签筛选状态
+
+#### REST API 扩展
+- `PUT /api/sessions/meta` — 更新会话别名和标签
+- `GET /api/tags` — 获取单个项目的所有标签
+- `GET /api/cross-tags` — 获取跨项目的全局标签聚合
+
+### Improved
+
+#### 项目会话数统计更准确
+- Claude 项目列表的会话数现在与会话列表一致：优先使用 `sessions-index.json` 索引统计有消息的会话，再加上磁盘上存在但不在索引中的非空文件
+- 解决了之前"项目卡片显示 N 个会话"但进入后实际只有 M 个的不一致问题
+
+#### 恢复会话按钮优化
+- 所有恢复按钮（会话列表 + 消息详情页）统一支持右键复制恢复命令
+- 按钮文字在"已复制"状态与默认状态间正确切换
+
+---
+
 ## [1.3.1] - 2026-02-24
 
 ### Fixed
@@ -389,6 +427,7 @@ First release of Claude Memory Viewer.
 - **Search**: Rayon parallel brute-force search across all JSONL files
 - **Path Handling**: Cross-platform Claude home detection (`%USERPROFILE%\.claude` on Windows, `~/.claude` on Unix)
 
+[1.4.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.4.0
 [1.3.1]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.3.1
 [1.3.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.3.0
 [1.1.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.1.0

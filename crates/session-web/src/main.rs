@@ -8,7 +8,7 @@ use axum::{
     http::StatusCode,
     middleware::{self, Next},
     response::Response,
-    routing::{delete, get},
+    routing::{delete, get, put},
     Router,
 };
 use clap::Parser;
@@ -66,6 +66,12 @@ async fn main() {
         .route("/api/projects", get(routes::projects::get_projects))
         .route("/api/sessions", get(routes::sessions::get_sessions))
         .route("/api/sessions", delete(routes::sessions::delete_session))
+        .route(
+            "/api/sessions/meta",
+            put(routes::sessions::update_session_meta),
+        )
+        .route("/api/tags", get(routes::sessions::get_all_tags))
+        .route("/api/cross-tags", get(routes::sessions::get_cross_project_tags))
         .route("/api/messages", get(routes::messages::get_messages))
         .route("/api/search", get(routes::search::global_search))
         .route("/api/stats", get(routes::stats::get_stats))

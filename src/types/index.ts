@@ -24,6 +24,9 @@ export interface SessionIndexEntry {
   cwd: string | null;
   modelProvider: string | null;
   cliVersion: string | null;
+  // User metadata
+  alias: string | null;
+  tags: string[] | null;
 }
 
 export type DisplayContentBlock =
@@ -74,6 +77,8 @@ export interface SearchResult {
   projectName: string;
   sessionId: string;
   firstPrompt: string | null;
+  alias: string | null;
+  tags: string[] | null;
   matchedText: string;
   role: string;
   timestamp: string | null;

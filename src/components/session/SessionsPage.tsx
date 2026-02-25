@@ -9,11 +9,13 @@ import {
   Play,
   Trash2,
   Loader2,
+  Tag,
+  Copy,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { zhCN } from "date-fns/locale";
 import { api } from "../../services/api";
-import { Copy } from "lucide-react";
+import { SessionMetaEditor } from "./SessionMetaEditor";
 
 declare const __IS_TAURI__: boolean;
 
@@ -28,11 +30,16 @@ export function SessionsPage() {
     selectProject,
     deleteSession,
     projects,
+    allTags,
+    tagFilter,
+    setTagFilter,
   } = useAppStore();
 
   const project = projects.find((p) => p.id === projectId);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteTargetSessionId, setDeleteTargetSessionId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingSession, setEditingSession] = useState<string | null>(null);
 
   useEffect(() => {
     if (projectId) {
@@ -44,16 +51,30 @@ export function SessionsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteSession(deleteTarget);
+      await deleteSession(deleteTarget, deleteTargetSessionId || undefined);
     } catch (err) {
       console.error("Failed to delete session:", err);
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
+      setDeleteTargetSessionId(null);
     }
   };
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const getResumeCommand = (sessionId: string) =>
+    source === "claude"
+      ? `claude --resume ${sessionId}`
+      : `codex resume ${sessionId}`;
+
+  const handleCopyCommand = async (e: React.MouseEvent, sessionId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await navigator.clipboard.writeText(getResumeCommand(sessionId));
+    setCopiedId(sessionId);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleResume = async (
     e: React.MouseEvent,
@@ -70,14 +91,29 @@ export function SessionsPage() {
         console.error("Failed to resume session:", err);
       }
     } else {
-      const cmd = source === "claude"
-        ? `claude --resume ${sessionId}`
-        : `codex resume ${sessionId}`;
-      await navigator.clipboard.writeText(cmd);
-      setCopiedId(sessionId);
-      setTimeout(() => setCopiedId(null), 2000);
+      await handleCopyCommand(e, sessionId);
     }
   };
+
+  const toggleTagFilter = (tag: string) => {
+    if (tagFilter.includes(tag)) {
+      setTagFilter(tagFilter.filter((t) => t !== tag));
+    } else {
+      setTagFilter([...tagFilter, tag]);
+    }
+  };
+
+  // Filter sessions by tags
+  const filteredSessions =
+    tagFilter.length > 0
+      ? sessions.filter((s) =>
+          tagFilter.every((t) => s.tags?.includes(t))
+        )
+      : sessions;
+
+  const editSession = editingSession
+    ? sessions.find((s) => s.sessionId === editingSession)
+    : null;
 
   return (
     <div className="p-6">
@@ -101,14 +137,46 @@ export function SessionsPage() {
         </div>
       </div>
 
+      {/* Tag filter bar */}
+      {allTags.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Tag className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => toggleTagFilter(tag)}
+              className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                tagFilter.includes(tag)
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+          {tagFilter.length > 0 && (
+            <button
+              onClick={() => setTagFilter([])}
+              className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              清除筛选
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Sessions list */}
       {sessionsLoading ? (
         <div className="text-muted-foreground">加载会话列表...</div>
-      ) : sessions.length === 0 ? (
-        <div className="text-muted-foreground">此项目没有会话记录。</div>
+      ) : filteredSessions.length === 0 ? (
+        <div className="text-muted-foreground">
+          {tagFilter.length > 0
+            ? "没有匹配筛选条件的会话。"
+            : "此项目没有会话记录。"}
+        </div>
       ) : (
         <div className="space-y-2">
-          {sessions.map((session) => (
+          {filteredSessions.map((session) => (
             <div
               key={session.sessionId}
               onClick={() =>
@@ -120,9 +188,29 @@ export function SessionsPage() {
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
+                  {/* Tags */}
+                  {session.tags && session.tags.length > 0 && (
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      {session.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/15 text-primary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Title: alias or firstPrompt */}
                   <p className="text-sm font-medium text-foreground line-clamp-2">
-                    {session.firstPrompt || "（无标题）"}
+                    {session.alias || session.firstPrompt || "（无标题）"}
                   </p>
+                  {/* Show original firstPrompt when alias is set */}
+                  {session.alias && session.firstPrompt && (
+                    <p className="text-xs text-muted-foreground/60 mt-0.5 line-clamp-1">
+                      {session.firstPrompt}
+                    </p>
+                  )}
                   <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
                     {session.messageCount != null && (
                       <span className="flex items-center gap-1">
@@ -160,6 +248,16 @@ export function SessionsPage() {
                 </div>
                 <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSession(session.sessionId);
+                    }}
+                    className="p-1.5 text-xs text-muted-foreground rounded-md hover:bg-accent hover:text-foreground transition-colors"
+                    title="编辑标签和别名"
+                  >
+                    <Tag className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={(e) =>
                       handleResume(
                         e,
@@ -168,13 +266,14 @@ export function SessionsPage() {
                         session.filePath
                       )
                     }
+                    onContextMenu={(e) => handleCopyCommand(e, session.sessionId)}
                     className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center gap-1"
-                    title={__IS_TAURI__ ? "在终端中恢复此会话" : "复制恢复命令"}
+                    title={__IS_TAURI__ ? "在终端中恢复此会话（右键复制命令）" : "复制恢复命令"}
                   >
-                    {__IS_TAURI__ ? (
-                      <><Play className="w-3 h-3" />Resume</>
-                    ) : copiedId === session.sessionId ? (
+                    {copiedId === session.sessionId ? (
                       <>已复制</>
+                    ) : __IS_TAURI__ ? (
+                      <><Play className="w-3 h-3" />Resume</>
                     ) : (
                       <><Copy className="w-3 h-3" />复制命令</>
                     )}
@@ -183,6 +282,7 @@ export function SessionsPage() {
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleteTarget(session.filePath);
+                      setDeleteTargetSessionId(session.sessionId);
                     }}
                     className="p-1.5 text-xs text-muted-foreground rounded-md hover:bg-destructive/10 hover:text-destructive transition-colors"
                     title="删除此会话"
@@ -206,7 +306,10 @@ export function SessionsPage() {
             </p>
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setDeleteTarget(null)}
+                onClick={() => {
+                  setDeleteTarget(null);
+                  setDeleteTargetSessionId(null);
+                }}
                 disabled={deleting}
                 className="px-4 py-2 text-sm rounded-md border border-border hover:bg-accent transition-colors"
               >
@@ -223,6 +326,16 @@ export function SessionsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Meta editor modal */}
+      {editingSession && editSession && (
+        <SessionMetaEditor
+          sessionId={editingSession}
+          currentAlias={editSession.alias}
+          currentTags={editSession.tags}
+          onClose={() => setEditingSession(null)}
+        />
       )}
     </div>
   );

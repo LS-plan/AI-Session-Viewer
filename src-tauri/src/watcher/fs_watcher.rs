@@ -60,9 +60,14 @@ pub fn start_watcher(app_handle: AppHandle) -> Result<(), String> {
             match event {
                 Ok(event) => {
                     let relevant = event.paths.iter().any(|p| {
-                        p.extension()
-                            .map(|e| e == "jsonl" || e == "json")
-                            .unwrap_or(false)
+                        let is_meta = p
+                            .file_name()
+                            .map(|n| n == ".session-viewer-meta.json")
+                            .unwrap_or(false);
+                        !is_meta
+                            && p.extension()
+                                .map(|e| e == "jsonl" || e == "json")
+                                .unwrap_or(false)
                     });
 
                     if relevant && last_emit.elapsed() >= DEBOUNCE_DURATION {

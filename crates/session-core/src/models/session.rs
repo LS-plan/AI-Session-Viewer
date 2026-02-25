@@ -46,4 +46,7 @@ pub struct SessionIndexEntry {
     pub cwd: Option<String>,
     pub model_provider: Option<String>,
     pub cli_version: Option<String>,
+    // User metadata
+    pub alias: Option<String>,
+    pub tags: Option<Vec<String>>,
 }

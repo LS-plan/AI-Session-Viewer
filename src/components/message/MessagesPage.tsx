@@ -99,6 +99,20 @@ export function MessagesPage() {
 
   const [copied, setCopied] = useState(false);
 
+  const getResumeCommand = () => {
+    if (!session) return "";
+    return source === "claude"
+      ? `claude --resume ${session.sessionId}`
+      : `codex resume ${session.sessionId}`;
+  };
+
+  const handleCopyCommand = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await navigator.clipboard.writeText(getResumeCommand());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleResume = async () => {
     if (!session) return;
     if (__IS_TAURI__) {
@@ -110,9 +124,7 @@ export function MessagesPage() {
         console.error("Failed to resume session:", err);
       }
     } else {
-      const cmd = source === "claude"
-        ? `claude --resume ${session.sessionId}`
-        : `codex resume ${session.sessionId}`;
+      const cmd = getResumeCommand();
       await navigator.clipboard.writeText(cmd);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -134,7 +146,7 @@ export function MessagesPage() {
           </button>
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">
-              {session?.firstPrompt || session?.sessionId || "Session"}
+              {session?.alias || session?.firstPrompt || session?.sessionId || "Session"}
             </p>
             <p className="text-xs text-muted-foreground">
               {messagesTotal} 条消息
@@ -164,13 +176,14 @@ export function MessagesPage() {
           </button>
           <button
             onClick={handleResume}
+            onContextMenu={handleCopyCommand}
             className="ml-1 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 flex items-center gap-1"
-            title={__IS_TAURI__ ? "在终端中恢复此会话" : "复制恢复命令"}
+            title={__IS_TAURI__ ? "在终端中恢复此会话（右键复制命令）" : "复制恢复命令"}
           >
-            {__IS_TAURI__ ? (
-              <><Play className="w-3 h-3" />Resume</>
-            ) : copied ? (
+            {copied ? (
               <>已复制</>
+            ) : __IS_TAURI__ ? (
+              <><Play className="w-3 h-3" />Resume</>
             ) : (
               <><Copy className="w-3 h-3" />复制命令</>
             )}
