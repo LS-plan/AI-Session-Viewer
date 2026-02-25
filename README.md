@@ -90,6 +90,16 @@ docker compose up
 
 挂载路径、端口、Token 等参数在 [`docker-compose.yml`](docker-compose.yml) 中配置。
 
+**公网访问：**
+
+Web 服务器支持公网访问。将 `--host` 设为 `0.0.0.0` 即可监听所有网卡：
+
+```bash
+./session-web --host 0.0.0.0 --port 8080 --token my-secret
+```
+
+> **安全提示：** 应用会读取服务器上的 `~/.claude/projects/` 和 `~/.codex/sessions/`，包含完整会话记录。公网暴露时**务必设置 `--token`** 启用 Bearer Token 认证。此外，应用本身不提供 HTTPS，生产环境建议前置 Nginx / Caddy 做反向代理并启用 TLS。
+
 ### Web 版与桌面版的差异
 
 | 功能 | 桌面应用 | Web 服务器 |
