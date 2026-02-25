@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-02-25
+
+### Added
+
+#### 全局搜索 — 会话分组模式
+- 搜索页新增"消息 / 会话"分段切换按钮（搜索框下方）
+- **会话模式**：搜索结果按会话（`filePath`）分组展示，每张卡片显示项目名、匹配数、最新时间、别名/首条 Prompt、标签 pill、前 3 条匹配文本摘要（带高亮），超出部分显示"还有 N 条匹配..."
+- 点击会话卡片直接跳转到完整会话页面
+- **消息模式**：保持原有逐条消息的平铺列表行为不变
+
+#### 设置弹窗
+- 侧边栏底部"关于作者"文字按钮替换为齿轮图标按钮
+- 点击打开"设置"模态框，内含两个 Tab：
+  - **使用说明**：分模块介绍侧边栏、项目列表、会话列表、消息详情、全局搜索、主题切换的操作方式
+  - **关于作者**：保留原有作者信息（邮箱、QQ 群、哔哩哔哩、GitHub）
+
+---
+
 ## [1.4.0] - 2026-02-25
 
 ### Added
@@ -427,6 +445,7 @@ First release of Claude Memory Viewer.
 - **Search**: Rayon parallel brute-force search across all JSONL files
 - **Path Handling**: Cross-platform Claude home detection (`%USERPROFILE%\.claude` on Windows, `~/.claude` on Unix)
 
+[1.5.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.5.0
 [1.4.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.4.0
 [1.3.1]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.3.1
 [1.3.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.3.0

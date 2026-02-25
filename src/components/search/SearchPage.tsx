@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppStore } from "../../stores/appStore";
-import { Search, Loader2, MessageSquare, Tag } from "lucide-react";
+import { Search, Loader2, MessageSquare, MessagesSquare, Tag } from "lucide-react";
 
 export function SearchPage() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export function SearchPage() {
     setGlobalTagFilter,
   } = useAppStore();
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<"messages" | "sessions">("messages");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
@@ -92,6 +93,49 @@ export function SearchPage() {
         )
       : searchResults;
 
+  // Group results by session (filePath) for session mode
+  const groupedSessions = useMemo(() => {
+    if (searchMode !== "sessions") return [];
+    const groups = new Map<string, {
+      projectId: string;
+      projectName: string;
+      alias: string | null;
+      firstPrompt: string | null;
+      tags: string[] | null;
+      filePath: string;
+      matchCount: number;
+      latestTimestamp: string;
+      matchedTexts: string[];
+    }>();
+    for (const r of filteredResults) {
+      const existing = groups.get(r.filePath);
+      if (existing) {
+        existing.matchCount++;
+        if (r.timestamp && r.timestamp > existing.latestTimestamp) {
+          existing.latestTimestamp = r.timestamp;
+        }
+        if (existing.matchedTexts.length < 3) {
+          existing.matchedTexts.push(r.matchedText);
+        }
+      } else {
+        groups.set(r.filePath, {
+          projectId: r.projectId,
+          projectName: r.projectName,
+          alias: r.alias,
+          firstPrompt: r.firstPrompt,
+          tags: r.tags,
+          filePath: r.filePath,
+          matchCount: 1,
+          latestTimestamp: r.timestamp || "",
+          matchedTexts: [r.matchedText],
+        });
+      }
+    }
+    return Array.from(groups.values()).sort(
+      (a, b) => b.latestTimestamp.localeCompare(a.latestTimestamp)
+    );
+  }, [filteredResults, searchMode]);
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">全局搜索</h1>
@@ -110,6 +154,32 @@ export function SearchPage() {
         {searchLoading && (
           <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
         )}
+      </div>
+
+      {/* Mode toggle */}
+      <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5 w-fit mb-4">
+        <button
+          onClick={() => setSearchMode("messages")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            searchMode === "messages"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          消息
+        </button>
+        <button
+          onClick={() => setSearchMode("sessions")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            searchMode === "sessions"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <MessagesSquare className="w-3.5 h-3.5" />
+          会话
+        </button>
       </div>
 
       {/* Tag filter bar */}
@@ -142,57 +212,127 @@ export function SearchPage() {
 
       {/* Results */}
       {filteredResults.length > 0 ? (
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            找到 {filteredResults.length} 条结果
-            {globalTagFilter.length > 0 && searchResults.length !== filteredResults.length && (
-              <span>（共 {searchResults.length} 条，已按标签筛选）</span>
-            )}
-          </p>
-          {filteredResults.map((result, i) => (
-            <div
-              key={i}
-              onClick={() => handleResultClick(result)}
-              className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 hover:bg-accent/30 transition-all cursor-pointer"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs px-2 py-0.5 bg-muted rounded font-medium">
-                  {result.projectName}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {getRoleLabel(result.role)}
-                </span>
-                {result.timestamp && (
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(result.timestamp).toLocaleDateString()}
+        searchMode === "messages" ? (
+          /* Message mode */
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              找到 {filteredResults.length} 条结果
+              {globalTagFilter.length > 0 && searchResults.length !== filteredResults.length && (
+                <span>（共 {searchResults.length} 条，已按标签筛选）</span>
+              )}
+            </p>
+            {filteredResults.map((result, i) => (
+              <div
+                key={i}
+                onClick={() => handleResultClick(result)}
+                className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 hover:bg-accent/30 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs px-2 py-0.5 bg-muted rounded font-medium">
+                    {result.projectName}
                   </span>
-                )}
-              </div>
-              {(result.alias || result.firstPrompt) && (
-                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                  <MessageSquare className="w-3 h-3" />
-                  {result.alias || result.firstPrompt}
-                </p>
-              )}
-              {/* Tags */}
-              {result.tags && result.tags.length > 0 && (
-                <div className="flex items-center gap-1.5 mb-2">
-                  {result.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/15 text-primary"
-                    >
-                      {tag}
+                  <span className="text-xs text-muted-foreground">
+                    {getRoleLabel(result.role)}
+                  </span>
+                  {result.timestamp && (
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(result.timestamp).toLocaleDateString()}
                     </span>
-                  ))}
+                  )}
                 </div>
+                {(result.alias || result.firstPrompt) && (
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3" />
+                    {result.alias || result.firstPrompt}
+                  </p>
+                )}
+                {/* Tags */}
+                {result.tags && result.tags.length > 0 && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {result.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/15 text-primary"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p className="text-sm font-mono whitespace-pre-wrap break-all">
+                  {highlightMatch(result.matchedText, query)}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Session mode */
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              找到 {groupedSessions.length} 个会话（共 {filteredResults.length} 条匹配）
+              {globalTagFilter.length > 0 && searchResults.length !== filteredResults.length && (
+                <span>（已按标签筛选）</span>
               )}
-              <p className="text-sm font-mono whitespace-pre-wrap break-all">
-                {highlightMatch(result.matchedText, query)}
-              </p>
-            </div>
-          ))}
-        </div>
+            </p>
+            {groupedSessions.map((session) => (
+              <div
+                key={session.filePath}
+                onClick={() => {
+                  const encodedProjectId = encodeURIComponent(session.projectId);
+                  const encodedFilePath = encodeURIComponent(session.filePath);
+                  navigate(`/projects/${encodedProjectId}/session/${encodedFilePath}`);
+                }}
+                className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 hover:bg-accent/30 transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs px-2 py-0.5 bg-muted rounded font-medium">
+                    {session.projectName}
+                  </span>
+                  <span className="text-xs px-2 py-0.5 bg-primary/15 text-primary rounded font-medium">
+                    {session.matchCount} 条匹配
+                  </span>
+                  {session.latestTimestamp && (
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {new Date(session.latestTimestamp).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+                {(session.alias || session.firstPrompt) && (
+                  <p className="text-sm text-foreground mb-2 flex items-center gap-1">
+                    <MessagesSquare className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <span className="truncate">{session.alias || session.firstPrompt}</span>
+                  </p>
+                )}
+                {/* Tags */}
+                {session.tags && session.tags.length > 0 && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {session.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-block px-2 py-0.5 text-xs rounded-full bg-primary/15 text-primary"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Matched text previews */}
+                <div className="space-y-1">
+                  {session.matchedTexts.map((text, i) => (
+                    <p key={i} className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all line-clamp-1">
+                      {highlightMatch(text, query)}
+                    </p>
+                  ))}
+                  {session.matchCount > 3 && (
+                    <p className="text-xs text-muted-foreground/70">
+                      还有 {session.matchCount - 3} 条匹配...
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : query && !searchLoading ? (
         <div className="text-center text-muted-foreground py-12">
           {globalTagFilter.length > 0 && searchResults.length > 0
