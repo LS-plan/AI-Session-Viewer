@@ -22,12 +22,6 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { ModelInfo, QuickChatMessage } from "../../types/chat";
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
-
-/** Check if a model string looks like a full API model ID (contains a hyphen). */
-function isFullModelId(model: string): boolean {
-  return model.includes("-");
-}
 
 export function QuickChatPage() {
   const {
@@ -61,15 +55,7 @@ export function QuickChatPage() {
     }
   }, [initialized, fetchCliConfig, fetchModelList]);
 
-  // Set default model from CLI config or fallback
-  useEffect(() => {
-    if (!model && initialized) {
-      const cliDefault = cliConfig?.defaultModel;
-      const defModel =
-        (cliDefault && isFullModelId(cliDefault) ? cliDefault : null) || DEFAULT_MODEL;
-      setModel(defModel);
-    }
-  }, [cliConfig, model, initialized, setModel]);
+  // Model auto-selection is handled by quickChatStore.fetchModelList()
 
   // Auto-scroll
   useEffect(() => {

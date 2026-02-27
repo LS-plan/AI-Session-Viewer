@@ -23,7 +23,7 @@ interface QuickChatState {
 let cancelFn: (() => void) | null = null;
 
 export const useQuickChatStore = create<QuickChatState>((set, get) => ({
-  model: "",
+  model: localStorage.getItem("chat_lastUsedModel") || "",
   messages: [],
   isStreaming: false,
   error: null,
@@ -91,13 +91,34 @@ export const useQuickChatStore = create<QuickChatState>((set, get) => ({
     set({ messages: [], isStreaming: false, error: null });
   },
 
-  setModel: (m) => set({ model: m }),
+  setModel: (m) => {
+    localStorage.setItem("chat_lastUsedModel", m);
+    set({ model: m });
+  },
 
   fetchModelList: async () => {
     set({ modelListLoading: true });
     try {
       const models = await api.listModels("claude", "", "");
       set({ modelList: models, modelListLoading: false });
+
+      // Auto-select model if current model is empty or not in list
+      const state = get();
+      const modelIds = new Set(models.map((m) => m.id));
+      if (!state.model || !modelIds.has(state.model)) {
+        const resolve = (name: string): string => {
+          if (!name) return "";
+          if (modelIds.has(name)) return name;
+          const lower = name.toLowerCase();
+          const match = models.find((m) => m.id.toLowerCase().includes(lower));
+          return match?.id || "";
+        };
+        const selected = resolve(state.model) || (models.length > 0 ? models[0].id : "");
+        if (selected && selected !== state.model) {
+          localStorage.setItem("chat_lastUsedModel", selected);
+          set({ model: selected });
+        }
+      }
     } catch {
       set({ modelListLoading: false });
     }

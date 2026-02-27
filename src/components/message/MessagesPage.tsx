@@ -74,12 +74,28 @@ export function MessagesPage() {
     detectCli();
   }, [detectCli]);
 
+  // Extract the model used in this historical session
+  const sessionModel = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "assistant" && messages[i].model) {
+        return messages[i].model!;
+      }
+    }
+    return null;
+  }, [messages]);
+
   useEffect(() => {
     setChatProjectPath(chatProjectPath);
-    if (!chatModel) {
-      setChatModel("claude-sonnet-4-20250514");
+  }, [chatProjectPath, setChatProjectPath]);
+
+  // Set chat model from the historical session's model when entering a session
+  const modelInitRef = useRef<string>("");
+  useEffect(() => {
+    if (sessionModel && modelInitRef.current !== filePath) {
+      modelInitRef.current = filePath;
+      setChatModel(sessionModel);
     }
-  }, [chatProjectPath, chatModel, setChatProjectPath, setChatModel]);
+  }, [filePath, sessionModel, setChatModel]);
 
   // Clear chat state when leaving the page / switching sessions
   useEffect(() => {

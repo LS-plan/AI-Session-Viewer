@@ -225,7 +225,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isActive: false,
   sessionId: null,
   projectPath: "",
-  model: "",
+  model: localStorage.getItem("chat_lastUsedModel") || "",
 
   messages: [],
   rawOutput: [],
@@ -284,7 +284,32 @@ export const useChatStore = create<ChatState>((set, get) => ({
           group: "自定义",
           created: null,
         }));
-      set({ modelList: [...customModels, ...models], modelListLoading: false });
+      const allModels = [...customModels, ...models];
+      set({ modelList: allModels, modelListLoading: false });
+
+      // Auto-select model if current model is empty or not in the fetched list
+      const state = get();
+      const modelIds = new Set(allModels.map((m) => m.id));
+      if (!state.model || !modelIds.has(state.model)) {
+        // Helper: resolve a short name like "opus" to full ID "claude-opus-4-6"
+        const resolve = (name: string): string => {
+          if (!name) return "";
+          if (modelIds.has(name)) return name;
+          const lower = name.toLowerCase();
+          const match = allModels.find((m) => m.id.toLowerCase().includes(lower));
+          return match?.id || "";
+        };
+        const candidates = [
+          resolve(state.model),  // current model might be a short name
+          resolve(state.defaultModel),
+          resolve(state.cliConfig?.defaultModel || ""),
+        ].filter(Boolean);
+        const selected = candidates[0] || (allModels.length > 0 ? allModels[0].id : "");
+        if (selected && selected !== state.model) {
+          localStorage.setItem("chat_lastUsedModel", selected);
+          set({ model: selected });
+        }
+      }
     } catch (e) {
       set({
         modelListLoading: false,
@@ -295,6 +320,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   startNewChat: async (projectPath, prompt, model) => {
     const state = get();
+    localStorage.setItem("chat_lastUsedModel", model);
     set({
       isActive: true,
       isStreaming: true,
@@ -331,6 +357,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   continueExistingChat: async (sessionId, projectPath, prompt, model) => {
     const state = get();
+    localStorage.setItem("chat_lastUsedModel", model);
     set({
       isActive: true,
       isStreaming: true,
@@ -466,5 +493,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setSessionId: (id) => set({ sessionId: id }),
   setError: (e) => set({ error: e }),
   setProjectPath: (p) => set({ projectPath: p }),
-  setModel: (m) => set({ model: m }),
+  setModel: (m) => {
+    localStorage.setItem("chat_lastUsedModel", m);
+    set({ model: m });
+  },
 }));

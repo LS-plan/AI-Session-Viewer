@@ -10,7 +10,6 @@ import { FolderSelector } from "./FolderSelector";
 import { MessageSquarePlus, AlertCircle, Bot } from "lucide-react";
 import type { ChatMessage } from "../../types/chat";
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
 /** Enable virtual scrolling when there are more turns than this */
 const VIRTUAL_THRESHOLD = 30;
 
@@ -33,10 +32,9 @@ export function ChatPage() {
     isStreaming,
     error,
     availableClis,
-    defaultModel,
-    cliConfig,
     detectCli,
     fetchCliConfig,
+    fetchModelList,
     startNewChat,
     continueExistingChat,
     cancelChat,
@@ -44,16 +42,10 @@ export function ChatPage() {
     setModel,
   } = useChatStore();
 
-  // Detect CLI on mount + fetch config once
+  // Detect CLI on mount + fetch config & model list
   useEffect(() => { detectCli(); }, [detectCli]);
   useEffect(() => { fetchCliConfig(); }, [fetchCliConfig]);
-
-  // Set default model: user override > CLI config > hardcoded fallback
-  useEffect(() => {
-    if (!model) {
-      setModel(defaultModel || cliConfig?.defaultModel || DEFAULT_MODEL);
-    }
-  }, [model, defaultModel, cliConfig, setModel]);
+  useEffect(() => { fetchModelList(); }, [fetchModelList]);
 
   // Listen for stream events
   useChatStream();

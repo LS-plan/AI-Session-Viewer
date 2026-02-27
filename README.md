@@ -235,9 +235,8 @@ environment:
 - **Token 详细统计**：header 显示累计输入/输出/缓存读写 token，每条消息显示分项明细
 - **虚拟化滚动**：超过 30 轮自动启用虚拟滚动，长对话不卡顿
 - 支持 `--resume` 继续已有会话（消息详情页的「继续对话」按钮）
-- 输入框支持 `/model` 命令切换模型
-
-> **模型切换提示**：建议使用 `/model claude-opus-4-6` 的方式手动指定模型 ID。模型 ID 示例：`claude-sonnet-4-6`、`claude-opus-4-6`、`claude-haiku-4-5`。
+- **模型智能记忆**：自动记住上次使用的模型，下次打开无需重新选择；历史会话续聊时自动匹配原始会话模型
+- 输入框支持 `/model` 命令或 `Ctrl+K` 切换模型
 
 ### 快速问答
 
@@ -417,6 +416,7 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 - [x] CLI 配置自动检测（API Key / Base URL / 默认模型）
 - [x] 工具调用专用查看器（Read/Edit/Write/Bash/Grep/Glob）
 - [x] 对话轮次分组 + Token 详细统计 + 虚拟化滚动
+- [x] 模型智能记忆与自动选择（持久化 + 历史会话模型匹配）
 
 ## Star History
 

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] - 2026-02-27
+
+### Improved
+
+#### 模型智能记忆与自动选择
+- 模型选择器切换模型时自动持久化到 localStorage，下次打开应用立即恢复上次使用的模型
+- ChatPage 和 QuickChatPage 页面加载时自动获取最新模型列表，不再依赖硬编码默认值
+- 模型自动选择优先级：上次使用 > 用户设置默认 > CLI 配置默认 > 列表第一个
+- 支持短名称模糊匹配（如 CLI 配置的 "opus" 自动匹配 "claude-opus-4-6"）
+
+#### 历史会话续聊模型匹配
+- 在历史会话页面续聊时，自动提取该会话使用的模型并预选（如会话用了 opus 则自动选中 opus）
+- 不再固定为 claude-sonnet-4，尊重原始会话的模型选择
+
+### Removed
+- 移除 ChatPage 和 QuickChatPage 中的硬编码 `DEFAULT_MODEL` 常量
+
 ## [1.7.0] - 2026-02-27
 
 ### Added
