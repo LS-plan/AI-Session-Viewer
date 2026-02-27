@@ -417,8 +417,16 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 - [x] CLI 配置自动检测（API Key / Base URL / 默认模型）
 - [x] 工具调用专用查看器（Read/Edit/Write/Bash/Grep/Glob）
 - [x] 对话轮次分组 + Token 详细统计 + 虚拟化滚动
-- [ ] 自定义标题栏
-- [ ] 更多 AI CLI 数据源支持（Gemini CLI 等）
+
+## Star History
+
+<a href="https://star-history.com/#zuoliangyu/AI-Session-Viewer&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=zuoliangyu/AI-Session-Viewer&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=zuoliangyu/AI-Session-Viewer&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=zuoliangyu/AI-Session-Viewer&type=Date" />
+ </picture>
+</a>
 
 ## 贡献
 
