@@ -396,7 +396,7 @@ export function Sidebar() {
   );
 }
 
-function ProviderModelManager({ source }: { source: "claude" | "codex" }) {
+function ProviderModelManager() {
   const {
     modelList,
     modelListLoading,
@@ -412,17 +412,16 @@ function ProviderModelManager({ source }: { source: "claude" | "codex" }) {
   const [addedCount, setAddedCount] = useState<number | null>(null);
 
   const customModelIds = useMemo(() => {
-    const key = `chat_customModels_${source}`;
     try {
-      return new Set<string>(JSON.parse(localStorage.getItem(key) || "[]"));
+      return new Set<string>(JSON.parse(localStorage.getItem("chat_customModels_claude") || "[]"));
     } catch {
       return new Set<string>();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, modelList]);
+  }, [modelList]);
 
   const handleFetch = async () => {
-    await fetchModelList(source);
+    await fetchModelList();
     setFetched(true);
   };
 
@@ -602,12 +601,12 @@ function ProviderModelManager({ source }: { source: "claude" | "codex" }) {
   );
 }
 
-function CliConfigDisplay({ source }: { source: "claude" | "codex" }) {
+function CliConfigDisplay() {
   const { cliConfig, cliConfigLoading, cliConfigError, fetchCliConfig } = useChatStore();
   const [fetched, setFetched] = useState(false);
 
   const handleFetch = async () => {
-    await fetchCliConfig(source);
+    await fetchCliConfig();
     setFetched(true);
   };
 
@@ -616,7 +615,7 @@ function CliConfigDisplay({ source }: { source: "claude" | "codex" }) {
       handleFetch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source]);
+  }, []);
 
   if (cliConfigLoading) {
     return (
@@ -641,7 +640,7 @@ function CliConfigDisplay({ source }: { source: "claude" | "codex" }) {
     );
   }
 
-  if (!cliConfig || cliConfig.source !== source) {
+  if (!cliConfig) {
     return (
       <button onClick={handleFetch} className="text-xs text-primary hover:text-primary/80">
         检测配置
@@ -737,18 +736,9 @@ function ChatSettingsTab() {
       {/* Anthropic (Claude) — auto-detected config */}
       <section>
         <h3 className="font-medium mb-2 text-foreground">Anthropic (Claude)</h3>
-        <CliConfigDisplay source="claude" />
+        <CliConfigDisplay />
         <div className="mt-2">
-          <ProviderModelManager source="claude" />
-        </div>
-      </section>
-
-      {/* OpenAI (Codex) — auto-detected config */}
-      <section>
-        <h3 className="font-medium mb-2 text-foreground">OpenAI (Codex)</h3>
-        <CliConfigDisplay source="codex" />
-        <div className="mt-2">
-          <ProviderModelManager source="codex" />
+          <ProviderModelManager />
         </div>
       </section>
 

@@ -136,32 +136,19 @@ async fn run_cli_process(
 
     let mut cmd = Command::new(&cli_path);
 
-    match source {
-        "claude" => {
-            if let Some(sid) = resume_session_id {
-                cmd.arg("--resume").arg(sid);
-            }
-            cmd.arg("-p").arg(prompt);
-            if !model.is_empty() {
-                cmd.arg("--model").arg(model);
-            }
-            cmd.arg("--output-format").arg("stream-json");
-            cmd.arg("--verbose");
-            if skip_permissions {
-                cmd.arg("--dangerously-skip-permissions");
-            }
-        }
-        "codex" => {
-            cmd.arg("exec").arg("--json");
-            if !model.is_empty() {
-                cmd.arg("-m").arg(model);
-            }
-            if let Some(sid) = resume_session_id {
-                cmd.arg("--session").arg(sid);
-            }
-            cmd.arg(prompt);
-        }
-        _ => return Err(format!("Unknown source: {}", source)),
+    // Build Claude CLI arguments
+    let _ = source; // always claude
+    if let Some(sid) = resume_session_id {
+        cmd.arg("--resume").arg(sid);
+    }
+    cmd.arg("-p").arg(prompt);
+    if !model.is_empty() {
+        cmd.arg("--model").arg(model);
+    }
+    cmd.arg("--output-format").arg("stream-json");
+    cmd.arg("--verbose");
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
     }
 
     if !project_path.is_empty() {

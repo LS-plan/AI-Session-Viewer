@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useQuickChatStore } from "../../stores/quickChatStore";
 import { useChatStore } from "../../stores/chatStore";
-import { useAppStore } from "../../stores/appStore";
 import {
   Send,
   Square,
   Bot,
-  Terminal,
   Trash2,
   ChevronDown,
   Zap,
@@ -24,8 +22,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { ModelInfo, QuickChatMessage } from "../../types/chat";
 
-const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-6";
-const DEFAULT_CODEX_MODEL = "codex-mini-latest";
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 
 /** Check if a model string looks like a full API model ID (contains a hyphen). */
 function isFullModelId(model: string): boolean {
@@ -34,7 +31,6 @@ function isFullModelId(model: string): boolean {
 
 export function QuickChatPage() {
   const {
-    source,
     model,
     messages,
     isStreaming,
@@ -43,14 +39,12 @@ export function QuickChatPage() {
     modelListLoading,
     sendMessage,
     clearMessages,
-    setSource,
     setModel,
     fetchModelList,
     cancelStream,
   } = useQuickChatStore();
 
   const { cliConfig, fetchCliConfig } = useChatStore();
-  const appSource = useAppStore((s) => s.source);
 
   const [text, setText] = useState("");
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
@@ -58,28 +52,24 @@ export function QuickChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Initialize source from app store
+  // Initialize
   useEffect(() => {
     if (!initialized) {
-      setSource(appSource);
-      fetchCliConfig(appSource);
-      fetchModelList(appSource);
+      fetchCliConfig();
+      fetchModelList();
       setInitialized(true);
     }
-  }, [appSource, initialized, setSource, fetchCliConfig, fetchModelList]);
+  }, [initialized, fetchCliConfig, fetchModelList]);
 
   // Set default model from CLI config or fallback
-  // CLI config may contain short aliases (e.g. "opus") which don't work with the API,
-  // so only use it if it looks like a full model ID (contains a hyphen).
   useEffect(() => {
     if (!model && initialized) {
       const cliDefault = cliConfig?.defaultModel;
       const defModel =
-        (cliDefault && isFullModelId(cliDefault) ? cliDefault : null) ||
-        (source === "codex" ? DEFAULT_CODEX_MODEL : DEFAULT_CLAUDE_MODEL);
+        (cliDefault && isFullModelId(cliDefault) ? cliDefault : null) || DEFAULT_MODEL;
       setModel(defModel);
     }
-  }, [cliConfig, source, model, initialized, setModel]);
+  }, [cliConfig, model, initialized, setModel]);
 
   // Auto-scroll
   useEffect(() => {
@@ -138,23 +128,10 @@ export function QuickChatPage() {
     }
   };
 
-  const handleSourceToggle = (s: "claude" | "codex") => {
-    if (isStreaming || s === source) return;
-    setSource(s);
-    setModel("");
-    fetchCliConfig(s);
-    fetchModelList(s);
-    clearMessages();
-  };
-
-  const sourceColor = source === "codex" ? "text-green-500" : "text-orange-500";
-  const SourceIcon = source === "codex" ? Terminal : Bot;
-
   function shortModelName(id: string): string {
     return id
       .replace(/-\d{8}$/, "")
-      .replace(/^claude-/, "")
-      .replace(/^codex-/, "codex ");
+      .replace(/^claude-/, "");
   }
 
   return (
@@ -179,15 +156,11 @@ export function QuickChatPage() {
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
-          <QuickChatEmpty
-            source={source}
-            onSourceChange={handleSourceToggle}
-            cliConfig={cliConfig}
-          />
+          <QuickChatEmpty cliConfig={cliConfig} />
         ) : (
           <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
             {messages.map((msg, i) => (
-              <QuickMessage key={i} message={msg} source={source} isLast={i === messages.length - 1} isStreaming={isStreaming} />
+              <QuickMessage key={i} message={msg} isLast={i === messages.length - 1} isStreaming={isStreaming} />
             ))}
             {error && (
               <div className="flex items-center gap-2 py-2 text-sm text-red-400">
@@ -203,36 +176,8 @@ export function QuickChatPage() {
       {/* Input area */}
       <div className="max-w-3xl mx-auto w-full">
         <div className="border-t border-border bg-card px-4 py-3">
-          {/* Source & Model row */}
+          {/* Model row */}
           <div className="flex items-center gap-2 mb-2">
-            {/* Source toggle */}
-            <div className="flex rounded-md bg-muted p-0.5">
-              <button
-                onClick={() => handleSourceToggle("claude")}
-                disabled={isStreaming}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-all ${
-                  source === "claude"
-                    ? "bg-orange-500/20 text-orange-400 shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Bot className="w-3 h-3" />
-                Claude
-              </button>
-              <button
-                onClick={() => handleSourceToggle("codex")}
-                disabled={isStreaming}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-all ${
-                  source === "codex"
-                    ? "bg-green-500/20 text-green-400 shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Terminal className="w-3 h-3" />
-                Codex
-              </button>
-            </div>
-
             {/* Model button */}
             <button
               onClick={() => setModelSelectorOpen(true)}
@@ -240,7 +185,7 @@ export function QuickChatPage() {
               className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border border-border bg-muted hover:bg-accent/50 transition-colors disabled:opacity-50"
               title={model || "选择模型 (Ctrl+K)"}
             >
-              <SourceIcon className={`w-3 h-3 ${sourceColor}`} />
+              <Bot className="w-3 h-3 text-orange-500" />
               <span className="max-w-[12rem] truncate text-foreground">
                 {model ? shortModelName(model) : "选择模型"}
               </span>
@@ -291,12 +236,11 @@ export function QuickChatPage() {
       <QuickModelSelector
         open={modelSelectorOpen}
         onClose={() => setModelSelectorOpen(false)}
-        source={source}
         currentModel={model}
         modelList={modelList}
         modelListLoading={modelListLoading}
         onSelect={(m) => setModel(m)}
-        onRefresh={() => fetchModelList(source)}
+        onRefresh={fetchModelList}
       />
     </div>
   );
@@ -305,12 +249,8 @@ export function QuickChatPage() {
 // ── Empty state ──
 
 function QuickChatEmpty({
-  source,
-  onSourceChange,
   cliConfig,
 }: {
-  source: "claude" | "codex";
-  onSourceChange: (s: "claude" | "codex") => void;
   cliConfig: import("../../types/chat").CliConfig | null;
 }) {
   return (
@@ -320,39 +260,8 @@ function QuickChatEmpty({
           <Zap className="w-10 h-10 mx-auto text-muted-foreground" />
           <h2 className="text-lg font-semibold">快速问答</h2>
           <p className="text-sm text-muted-foreground">
-            直接调用 API 进行纯文本对话，无需工作目录
+            直接调用 Claude API 进行纯文本对话，无需工作目录
           </p>
-        </div>
-
-        {/* Source selector */}
-        <div>
-          <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-            数据源
-          </label>
-          <div className="flex rounded-lg bg-muted p-0.5">
-            <button
-              onClick={() => onSourceChange("claude")}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                source === "claude"
-                  ? "bg-orange-500/20 text-orange-400 shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Bot className="w-4 h-4" />
-              Claude
-            </button>
-            <button
-              onClick={() => onSourceChange("codex")}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                source === "codex"
-                  ? "bg-green-500/20 text-green-400 shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Terminal className="w-4 h-4" />
-              Codex
-            </button>
-          </div>
         </div>
 
         {/* CLI config status */}
@@ -379,7 +288,7 @@ function QuickChatEmpty({
         )}
 
         <p className="text-xs text-center text-muted-foreground">
-          选择数据源和模型后，在下方输入框输入问题开始对话
+          选择模型后，在下方输入框输入问题开始对话
         </p>
       </div>
     </div>
@@ -390,12 +299,10 @@ function QuickChatEmpty({
 
 function QuickMessage({
   message,
-  source,
   isLast,
   isStreaming,
 }: {
   message: QuickChatMessage;
-  source: string;
   isLast: boolean;
   isStreaming: boolean;
 }) {
@@ -413,15 +320,14 @@ function QuickMessage({
     );
   }
 
-  const SourceIcon = source === "codex" ? Terminal : Bot;
   const showCursor = isLast && isStreaming;
 
   return (
     <div className="flex justify-start">
       <div className="max-w-[80%] rounded-lg px-3 py-2 text-sm text-foreground">
         <div className="flex items-center gap-1.5 mb-1">
-          <SourceIcon className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">AI</span>
+          <Bot className="w-3 h-3 text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">Claude</span>
           {showCursor && !message.content && (
             <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
           )}
@@ -472,12 +378,11 @@ function QuickMessage({
   );
 }
 
-// ── Simple model selector for quick chat (reuses pattern from ModelSelector) ──
+// ── Simple model selector for quick chat ──
 
 function QuickModelSelector({
   open,
   onClose,
-  source,
   currentModel,
   modelList,
   modelListLoading,
@@ -486,7 +391,6 @@ function QuickModelSelector({
 }: {
   open: boolean;
   onClose: () => void;
-  source: string;
   currentModel: string;
   modelList: ModelInfo[];
   modelListLoading: boolean;
@@ -514,7 +418,6 @@ function QuickModelSelector({
     );
   }, [modelList, search]);
 
-  // Whether the search term could be used as a custom model ID
   const canUseAsCustom = search.trim().length > 0 && filtered.length === 0;
 
   const grouped = useMemo(() => {

@@ -20,7 +20,6 @@ interface Props {
 
 export function ModelSelector({ open, onClose, onSelect }: Props) {
   const {
-    source,
     model,
     modelList,
     modelListLoading,
@@ -41,14 +40,14 @@ export function ModelSelector({ open, onClose, onSelect }: Props) {
   // Fetch model list when opened
   useEffect(() => {
     if (open) {
-      fetchModelList(source);
+      fetchModelList();
       setSearch("");
       setHighlightIndex(0);
       setShowAddInput(false);
       setNewModelId("");
       setTimeout(() => inputRef.current?.focus(), 50);
     }
-  }, [open, source, fetchModelList]);
+  }, [open, fetchModelList]);
 
   // Focus add input when shown
   useEffect(() => {
@@ -87,13 +86,12 @@ export function ModelSelector({ open, onClose, onSelect }: Props) {
 
   // Get custom model IDs for delete detection
   const customModelIds = useMemo(() => {
-    const key = `chat_customModels_${source}`;
     try {
-      return new Set<string>(JSON.parse(localStorage.getItem(key) || "[]"));
+      return new Set<string>(JSON.parse(localStorage.getItem("chat_customModels_claude") || "[]"));
     } catch {
       return new Set<string>();
     }
-  }, [source, modelList]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [modelList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset highlight when search changes
   useEffect(() => {
@@ -189,7 +187,7 @@ export function ModelSelector({ open, onClose, onSelect }: Props) {
         {/* Management bar */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border bg-muted/50">
           <button
-            onClick={() => fetchModelList(source)}
+            onClick={() => fetchModelList()}
             disabled={modelListLoading}
             className="flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-50"
             title="刷新模型列表"
@@ -263,7 +261,7 @@ export function ModelSelector({ open, onClose, onSelect }: Props) {
                 {modelListError}
               </div>
               <button
-                onClick={() => fetchModelList(source)}
+                onClick={() => fetchModelList()}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 点击重试

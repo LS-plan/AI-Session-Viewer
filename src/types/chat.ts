@@ -36,7 +36,14 @@ export interface ChatMessage {
   content: ChatContentBlock[];
   model?: string;
   timestamp: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: TokenUsage;
+}
+
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationInputTokens: number;
+  cacheReadInputTokens: number;
 }
 
 export type ChatContentBlock =

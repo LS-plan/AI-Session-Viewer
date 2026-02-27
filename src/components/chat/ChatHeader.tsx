@@ -1,33 +1,49 @@
+import { useMemo } from "react";
 import { useChatStore } from "../../stores/chatStore";
 import {
   FolderOpen,
   Bot,
-  Terminal,
   CircleDot,
   Shield,
   ShieldOff,
+  Cpu,
 } from "lucide-react";
 
 export function ChatHeader() {
   const {
-    source,
     projectPath,
+    messages,
     isStreaming,
     availableClis,
     skipPermissions,
     setSkipPermissions,
   } = useChatStore();
 
-  const cliInfo = availableClis.find((c) => c.cliType === source);
-  const sourceColor = source === "codex" ? "text-green-500" : "text-orange-500";
-  const SourceIcon = source === "codex" ? Terminal : Bot;
+  const cliInfo = availableClis.find((c) => c.cliType === "claude");
+
+  // Aggregate token stats
+  const tokenStats = useMemo(() => {
+    let input = 0;
+    let output = 0;
+    let cacheWrite = 0;
+    let cacheRead = 0;
+    for (const msg of messages) {
+      if (msg.usage) {
+        input += msg.usage.inputTokens;
+        output += msg.usage.outputTokens;
+        cacheWrite += msg.usage.cacheCreationInputTokens;
+        cacheRead += msg.usage.cacheReadInputTokens;
+      }
+    }
+    return { input, output, cacheWrite, cacheRead, total: input + output };
+  }, [messages]);
 
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card">
       {/* Source indicator */}
       <div className="flex items-center gap-1.5">
-        <SourceIcon className={`w-4 h-4 ${sourceColor}`} />
-        <span className="text-sm font-medium capitalize">{source}</span>
+        <Bot className="w-4 h-4 text-orange-500" />
+        <span className="text-sm font-medium">Claude</span>
       </div>
 
       {/* CLI status */}
@@ -51,6 +67,28 @@ export function ChatHeader() {
           <span className="truncate" title={projectPath}>
             {projectPath.split(/[\\/]/).pop()}
           </span>
+        </div>
+      )}
+
+      {/* Token stats */}
+      {tokenStats.total > 0 && (
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground tabular-nums">
+          <Cpu className="w-3 h-3 shrink-0" />
+          <span title="输入 tokens">入 {tokenStats.input.toLocaleString()}</span>
+          <span className="opacity-30">|</span>
+          <span title="输出 tokens">出 {tokenStats.output.toLocaleString()}</span>
+          {tokenStats.cacheWrite > 0 && (
+            <>
+              <span className="opacity-30">|</span>
+              <span title="写入缓存 tokens">写缓存 {tokenStats.cacheWrite.toLocaleString()}</span>
+            </>
+          )}
+          {tokenStats.cacheRead > 0 && (
+            <>
+              <span className="opacity-30">|</span>
+              <span title="读取缓存 tokens">读缓存 {tokenStats.cacheRead.toLocaleString()}</span>
+            </>
+          )}
         </div>
       )}
 

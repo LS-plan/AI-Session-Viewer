@@ -4,7 +4,6 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
-  Wrench,
   Brain,
   Settings,
 } from "lucide-react";
@@ -12,27 +11,51 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { ToolViewer } from "./tool-viewers/ToolViewers";
 
 interface Props {
   message: ChatMessage;
-  source: string;
   showTimestamp?: boolean;
   showModel?: boolean;
+  /** Map from tool_use id → matching tool_result (for linked rendering) */
+  toolResultMap?: Map<string, { content: string; isError: boolean }>;
+  /** Set of tool_result IDs already rendered via linked tool_use (to skip) */
+  linkedToolUseIds?: Set<string>;
 }
 
 /**
- * Renders a streaming chat message using the same visual style
- * as the existing MessageThread components (UserMessage / AssistantMessage).
+ * Renders a streaming chat message with specialized tool viewers.
+ * When toolResultMap is provided, tool_use blocks are rendered with their
+ * matching results in a unified view (Read→code, Edit→diff, Bash→terminal).
  */
-export function StreamingMessage({ message, source, showTimestamp, showModel }: Props) {
+export function StreamingMessage({
+  message,
+  showTimestamp,
+  showModel,
+  toolResultMap,
+  linkedToolUseIds,
+}: Props) {
   if (message.role === "system") {
     return <SystemMsg message={message} />;
   }
   if (message.role === "user") {
-    return <UserMsg message={message} showTimestamp={showTimestamp} />;
+    return (
+      <UserMsg
+        message={message}
+        showTimestamp={showTimestamp}
+        linkedToolUseIds={linkedToolUseIds}
+      />
+    );
   }
   // assistant + tool
-  return <AssistantMsg message={message} source={source} showTimestamp={showTimestamp} showModel={showModel} />;
+  return (
+    <AssistantMsg
+      message={message}
+      showTimestamp={showTimestamp}
+      showModel={showModel}
+      toolResultMap={toolResultMap}
+    />
+  );
 }
 
 /* ── System (result / info) ─────────────────────────────── */
@@ -47,9 +70,17 @@ function SystemMsg({ message }: { message: ChatMessage }) {
   );
 }
 
-/* ── User message (same as existing UserMessage style) ──── */
+/* ── User message ──── */
 
-function UserMsg({ message, showTimestamp }: { message: ChatMessage; showTimestamp?: boolean }) {
+function UserMsg({
+  message,
+  showTimestamp,
+  linkedToolUseIds,
+}: {
+  message: ChatMessage;
+  showTimestamp?: boolean;
+  linkedToolUseIds?: Set<string>;
+}) {
   return (
     <div className="flex justify-end">
       <div className="max-w-[85%]">
@@ -71,6 +102,9 @@ function UserMsg({ message, showTimestamp }: { message: ChatMessage; showTimesta
             );
           }
           if (block.type === "tool_result") {
+            // Skip if this result is already rendered via linked tool_use
+            if (linkedToolUseIds?.has(block.toolUseId)) return null;
+
             return (
               <div
                 key={i}
@@ -95,31 +129,28 @@ function UserMsg({ message, showTimestamp }: { message: ChatMessage; showTimesta
   );
 }
 
-/* ── Assistant message (same as existing AssistantMessage style) ── */
+/* ── Assistant message ── */
 
 function AssistantMsg({
   message,
-  source,
   showTimestamp,
   showModel,
+  toolResultMap,
 }: {
   message: ChatMessage;
-  source: string;
   showTimestamp?: boolean;
   showModel?: boolean;
+  toolResultMap?: Map<string, { content: string; isError: boolean }>;
 }) {
-  const assistantName = source === "codex" ? "Codex" : "Claude";
-  const iconColor = source === "codex" ? "text-green-500" : "text-orange-500";
-  const iconBg = source === "codex" ? "bg-green-500/10" : "bg-orange-500/10";
 
   return (
     <div className="flex gap-3">
-      <div className={`shrink-0 w-7 h-7 rounded-full ${iconBg} flex items-center justify-center mt-0.5`}>
-        <Bot className={`w-3.5 h-3.5 ${iconColor}`} />
+      <div className="shrink-0 w-7 h-7 rounded-full bg-orange-500/10 flex items-center justify-center mt-0.5">
+        <Bot className="w-3.5 h-3.5 text-orange-500" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-sm font-medium">{assistantName}</span>
+          <span className="text-sm font-medium">Claude</span>
           {showModel && message.model && (
             <span className="text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
               {message.model}
@@ -131,96 +162,43 @@ function AssistantMsg({
             </span>
           )}
           {message.usage && (
-            <span className="text-xs text-muted-foreground">
-              {message.usage.inputTokens + message.usage.outputTokens} tokens
+            <span
+              className="text-xs text-muted-foreground tabular-nums"
+              title={[
+                `输入: ${message.usage.inputTokens.toLocaleString()}`,
+                `输出: ${message.usage.outputTokens.toLocaleString()}`,
+                message.usage.cacheCreationInputTokens > 0
+                  ? `写入缓存: ${message.usage.cacheCreationInputTokens.toLocaleString()}`
+                  : "",
+                message.usage.cacheReadInputTokens > 0
+                  ? `读取缓存: ${message.usage.cacheReadInputTokens.toLocaleString()}`
+                  : "",
+              ].filter(Boolean).join(" · ")}
+            >
+              入{message.usage.inputTokens.toLocaleString()} 出{message.usage.outputTokens.toLocaleString()}
+              {message.usage.cacheReadInputTokens > 0 && ` 缓存${message.usage.cacheReadInputTokens.toLocaleString()}`}
             </span>
           )}
         </div>
         {message.content.map((block, i) => (
-          <ContentBlockRenderer key={i} block={block} />
+          <ContentBlockRenderer key={i} block={block} toolResultMap={toolResultMap} />
         ))}
       </div>
     </div>
   );
 }
 
-/* ── Content block renderers (same as existing AssistantMessage) ── */
+/* ── Content block renderers ── */
 
-function ContentBlockRenderer({ block }: { block: ChatContentBlock }) {
+function ContentBlockRenderer({
+  block,
+  toolResultMap,
+}: {
+  block: ChatContentBlock;
+  toolResultMap?: Map<string, { content: string; isError: boolean }>;
+}) {
   if (block.type === "text") {
-    return (
-      <div className="prose prose-sm max-w-none text-sm leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            code({ className, children, ...props }) {
-              const match = /language-(\w+)/.exec(className || "");
-              const codeStr = String(children).replace(/\n$/, "");
-              if (match) {
-                return (
-                  <SyntaxHighlighter
-                    style={oneDark}
-                    language={match[1]}
-                    PreTag="div"
-                    className="rounded-md text-xs !mt-2 !mb-2"
-                  >
-                    {codeStr}
-                  </SyntaxHighlighter>
-                );
-              }
-              return (
-                <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono" {...props}>
-                  {children}
-                </code>
-              );
-            },
-            pre({ children }) {
-              return <div className="not-prose my-2">{children}</div>;
-            },
-            a({ href, children }) {
-              return (
-                <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
-                  {children}
-                </a>
-              );
-            },
-            ul({ children }) {
-              return <ul className="list-disc pl-5 my-2 space-y-0.5">{children}</ul>;
-            },
-            ol({ children }) {
-              return <ol className="list-decimal pl-5 my-2 space-y-0.5">{children}</ol>;
-            },
-            li({ children }) {
-              return <li className="text-sm">{children}</li>;
-            },
-            h1({ children }) {
-              return <h1 className="text-lg font-bold mt-4 mb-2">{children}</h1>;
-            },
-            h2({ children }) {
-              return <h2 className="text-base font-bold mt-3 mb-2">{children}</h2>;
-            },
-            h3({ children }) {
-              return <h3 className="text-sm font-bold mt-3 mb-1">{children}</h3>;
-            },
-            blockquote({ children }) {
-              return (
-                <blockquote className="border-l-2 border-border pl-3 my-2 text-muted-foreground italic">
-                  {children}
-                </blockquote>
-              );
-            },
-            hr() {
-              return <hr className="border-border my-4" />;
-            },
-            p({ children }) {
-              return <p className="my-2 leading-relaxed">{children}</p>;
-            },
-          }}
-        >
-          {block.text}
-        </ReactMarkdown>
-      </div>
-    );
+    return <TextBlock text={block.text} />;
   }
 
   if (block.type === "thinking") {
@@ -228,15 +206,97 @@ function ContentBlockRenderer({ block }: { block: ChatContentBlock }) {
   }
 
   if (block.type === "tool_use") {
-    return <ToolCallBlock name={block.name} input={block.input} />;
+    const result = toolResultMap?.get(block.id) ?? null;
+    return <ToolViewer name={block.name} input={block.input} result={result} />;
   }
 
   if (block.type === "tool_result") {
-    return <ToolResultBlock content={block.content} isError={block.isError} />;
+    // In assistant messages, tool_results are rare but possible
+    return <FallbackToolResult content={block.content} isError={block.isError} />;
   }
 
   return null;
 }
+
+/* ── Text block with markdown ── */
+
+function TextBlock({ text }: { text: string }) {
+  return (
+    <div className="prose prose-sm max-w-none text-sm leading-relaxed [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          code({ className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || "");
+            const codeStr = String(children).replace(/\n$/, "");
+            if (match) {
+              return (
+                <SyntaxHighlighter
+                  style={oneDark}
+                  language={match[1]}
+                  PreTag="div"
+                  className="rounded-md text-xs !mt-2 !mb-2"
+                >
+                  {codeStr}
+                </SyntaxHighlighter>
+              );
+            }
+            return (
+              <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono" {...props}>
+                {children}
+              </code>
+            );
+          },
+          pre({ children }) {
+            return <div className="not-prose my-2">{children}</div>;
+          },
+          a({ href, children }) {
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">
+                {children}
+              </a>
+            );
+          },
+          ul({ children }) {
+            return <ul className="list-disc pl-5 my-2 space-y-0.5">{children}</ul>;
+          },
+          ol({ children }) {
+            return <ol className="list-decimal pl-5 my-2 space-y-0.5">{children}</ol>;
+          },
+          li({ children }) {
+            return <li className="text-sm">{children}</li>;
+          },
+          h1({ children }) {
+            return <h1 className="text-lg font-bold mt-4 mb-2">{children}</h1>;
+          },
+          h2({ children }) {
+            return <h2 className="text-base font-bold mt-3 mb-2">{children}</h2>;
+          },
+          h3({ children }) {
+            return <h3 className="text-sm font-bold mt-3 mb-1">{children}</h3>;
+          },
+          blockquote({ children }) {
+            return (
+              <blockquote className="border-l-2 border-border pl-3 my-2 text-muted-foreground italic">
+                {children}
+              </blockquote>
+            );
+          },
+          hr() {
+            return <hr className="border-border my-4" />;
+          },
+          p({ children }) {
+            return <p className="my-2 leading-relaxed">{children}</p>;
+          },
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+/* ── Thinking block ── */
 
 function ThinkingBlock({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
@@ -259,30 +319,9 @@ function ThinkingBlock({ text }: { text: string }) {
   );
 }
 
-function ToolCallBlock({ name, input }: { name: string; input: string }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div className="mt-2 mb-2 border border-border rounded-md overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-xs bg-muted/50 hover:bg-muted transition-colors"
-      >
-        <Wrench className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="font-mono font-medium">{name}</span>
-        {expanded ? <ChevronDown className="w-3 h-3 ml-auto" /> : <ChevronRight className="w-3 h-3 ml-auto" />}
-      </button>
-      {expanded && (
-        <div className="p-3 text-xs font-mono bg-muted/20 overflow-x-auto">
-          <pre className="whitespace-pre-wrap break-all">
-            {input.length > 5000 ? input.slice(0, 5000) + "\n... (truncated)" : input}
-          </pre>
-        </div>
-      )}
-    </div>
-  );
-}
+/* ── Fallback tool result (for edge cases) ── */
 
-function ToolResultBlock({ content, isError }: { content: string; isError: boolean }) {
+function FallbackToolResult({ content, isError }: { content: string; isError: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const isLong = content.length > 300;
 

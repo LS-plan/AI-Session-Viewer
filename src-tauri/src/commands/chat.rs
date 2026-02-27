@@ -26,13 +26,17 @@ impl ChatProcessState {
 }
 
 #[tauri::command]
-pub fn detect_cli() -> Result<Vec<cli::CliInstallation>, String> {
-    Ok(cli::discover_installations())
+pub async fn detect_cli() -> Result<Vec<cli::CliInstallation>, String> {
+    tokio::task::spawn_blocking(cli::discover_installations)
+        .await
+        .map_err(|e| format!("detect_cli task failed: {}", e))
 }
 
 #[tauri::command]
-pub fn get_cli_config(source: String) -> Result<CliConfig, String> {
-    cli_config::read_cli_config(&source)
+pub async fn get_cli_config(source: String) -> Result<CliConfig, String> {
+    tokio::task::spawn_blocking(move || cli_config::read_cli_config(&source))
+        .await
+        .map_err(|e| format!("get_cli_config task failed: {}", e))?
 }
 
 #[tauri::command]
@@ -161,35 +165,22 @@ fn build_chat_command(
 ) -> Result<Command, String> {
     let mut cmd = Command::new(cli_path);
 
-    match source {
-        "claude" => {
-            if let Some(sid) = resume_session_id {
-                cmd.arg("--resume").arg(sid);
-            }
-            cmd.arg("-p").arg(prompt);
-            if !model.is_empty() {
-                // Strip "-latest" suffix — Claude CLI expects full names like
-                // "claude-sonnet-4-6", not API-style "claude-sonnet-4-6-latest"
-                let cli_model = model.strip_suffix("-latest").unwrap_or(model);
-                cmd.arg("--model").arg(cli_model);
-            }
-            cmd.arg("--output-format").arg("stream-json");
-            cmd.arg("--verbose");
-            if skip_permissions {
-                cmd.arg("--dangerously-skip-permissions");
-            }
-        }
-        "codex" => {
-            cmd.arg("exec").arg("--json");
-            if !model.is_empty() {
-                cmd.arg("-m").arg(model);
-            }
-            if let Some(sid) = resume_session_id {
-                cmd.arg("--session").arg(sid);
-            }
-            cmd.arg(prompt);
-        }
-        _ => return Err(format!("Unknown source: {}", source)),
+    // Build Claude CLI arguments
+    let _ = source; // always claude
+    if let Some(sid) = resume_session_id {
+        cmd.arg("--resume").arg(sid);
+    }
+    cmd.arg("-p").arg(prompt);
+    if !model.is_empty() {
+        // Strip "-latest" suffix — Claude CLI expects full names like
+        // "claude-sonnet-4-6", not API-style "claude-sonnet-4-6-latest"
+        let cli_model = model.strip_suffix("-latest").unwrap_or(model);
+        cmd.arg("--model").arg(cli_model);
+    }
+    cmd.arg("--output-format").arg("stream-json");
+    cmd.arg("--verbose");
+    if skip_permissions {
+        cmd.arg("--dangerously-skip-permissions");
     }
 
     eprintln!("[chat] source={}, model={}, project={}", source, model, project_path);

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Square, ChevronDown, Bot, Terminal } from "lucide-react";
+import { Send, Square, ChevronDown, Bot } from "lucide-react";
 import { useChatStore } from "../../stores/chatStore";
 import { ModelSelector } from "./ModelSelector";
 
@@ -14,8 +14,7 @@ interface Props {
 function shortModelName(id: string): string {
   return id
     .replace(/-\d{8}$/, "")
-    .replace(/^claude-/, "")
-    .replace(/^codex-/, "codex ");
+    .replace(/^claude-/, "");
 }
 
 export function ChatInput({ onSend, onCancel, isStreaming, disabled }: Props) {
@@ -23,7 +22,7 @@ export function ChatInput({ onSend, onCancel, isStreaming, disabled }: Props) {
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const { source, model, setModel } = useChatStore();
+  const { model, setModel } = useChatStore();
 
   useEffect(() => {
     if (!isStreaming && textareaRef.current) {
@@ -79,8 +78,6 @@ export function ChatInput({ onSend, onCancel, isStreaming, disabled }: Props) {
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, [text]);
 
-  const sourceColor = source === "codex" ? "text-green-500" : "text-orange-500";
-  const SourceIcon = source === "codex" ? Terminal : Bot;
   const modelDisplay = model ? shortModelName(model) : "选择模型";
 
   return (
@@ -94,7 +91,7 @@ export function ChatInput({ onSend, onCancel, isStreaming, disabled }: Props) {
             className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border border-border bg-muted hover:bg-accent/50 transition-colors disabled:opacity-50"
             title={model || "选择模型 (Ctrl+K)"}
           >
-            <SourceIcon className={`w-3 h-3 ${sourceColor}`} />
+            <Bot className="w-3 h-3 text-orange-500" />
             <span className="max-w-[12rem] truncate text-foreground">{modelDisplay}</span>
             <ChevronDown className="w-3 h-3 text-muted-foreground" />
           </button>

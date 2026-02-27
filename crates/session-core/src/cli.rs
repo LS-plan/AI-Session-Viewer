@@ -7,27 +7,15 @@ use std::process::Command;
 pub struct CliInstallation {
     pub path: String,
     pub version: Option<String>,
-    pub cli_type: String, // "claude" | "codex"
+    pub cli_type: String, // "claude"
 }
 
-/// Find the CLI binary path for the given type ("claude" or "codex").
-pub fn find_cli(cli_type: &str) -> Result<String, String> {
-    let binary_name = match cli_type {
-        "claude" => {
-            if cfg!(windows) {
-                "claude.exe"
-            } else {
-                "claude"
-            }
-        }
-        "codex" => {
-            if cfg!(windows) {
-                "codex.exe"
-            } else {
-                "codex"
-            }
-        }
-        _ => return Err(format!("Unknown CLI type: {}", cli_type)),
+/// Find the Claude CLI binary path.
+pub fn find_cli(_cli_type: &str) -> Result<String, String> {
+    let binary_name = if cfg!(windows) {
+        "claude.exe"
+    } else {
+        "claude"
     };
 
     // Try system lookup first (which/where)
@@ -36,31 +24,26 @@ pub fn find_cli(cli_type: &str) -> Result<String, String> {
     }
 
     // Try known paths
-    for candidate in known_paths(cli_type) {
+    for candidate in known_paths() {
         if candidate.exists() {
             return Ok(candidate.to_string_lossy().to_string());
         }
     }
 
-    Err(format!(
-        "{} CLI not found. Please install it first.",
-        cli_type
-    ))
+    Err("Claude CLI not found. Please install it first.".to_string())
 }
 
-/// Discover all installed CLI tools.
+/// Discover installed Claude CLI.
 pub fn discover_installations() -> Vec<CliInstallation> {
     let mut installations = Vec::new();
 
-    for cli_type in &["claude", "codex"] {
-        if let Ok(path) = find_cli(cli_type) {
-            let version = get_cli_version(&path);
-            installations.push(CliInstallation {
-                path,
-                version,
-                cli_type: cli_type.to_string(),
-            });
-        }
+    if let Ok(path) = find_cli("claude") {
+        let version = get_cli_version(&path);
+        installations.push(CliInstallation {
+            path,
+            version,
+            cli_type: "claude".to_string(),
+        });
     }
 
     installations
@@ -90,22 +73,22 @@ fn which_binary(name: &str) -> Option<String> {
 }
 
 /// Known installation paths to check.
-fn known_paths(cli_type: &str) -> Vec<PathBuf> {
+fn known_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     let home = dirs::home_dir();
 
     let binary_name = if cfg!(windows) {
-        format!("{}.exe", cli_type)
+        "claude.exe"
     } else {
-        cli_type.to_string()
+        "claude"
     };
 
     if let Some(ref home) = home {
         // npm global
         if cfg!(windows) {
-            paths.push(home.join("AppData/Roaming/npm").join(&binary_name));
+            paths.push(home.join("AppData/Roaming/npm").join(binary_name));
         } else {
-            paths.push(home.join(".npm-global/bin").join(&binary_name));
+            paths.push(home.join(".npm-global/bin").join(binary_name));
         }
 
         // NVM paths
@@ -113,23 +96,23 @@ fn known_paths(cli_type: &str) -> Vec<PathBuf> {
         if nvm_dir.exists() {
             if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
                 for entry in entries.flatten() {
-                    paths.push(entry.path().join("bin").join(&binary_name));
+                    paths.push(entry.path().join("bin").join(binary_name));
                 }
             }
         }
 
         // Local bin
-        paths.push(home.join(".local/bin").join(&binary_name));
+        paths.push(home.join(".local/bin").join(binary_name));
 
         // Bun global
-        paths.push(home.join(".bun/bin").join(&binary_name));
+        paths.push(home.join(".bun/bin").join(binary_name));
     }
 
     // System paths (Unix)
     #[cfg(not(windows))]
     {
-        paths.push(PathBuf::from("/usr/local/bin").join(&binary_name));
-        paths.push(PathBuf::from("/opt/homebrew/bin").join(&binary_name));
+        paths.push(PathBuf::from("/usr/local/bin").join(binary_name));
+        paths.push(PathBuf::from("/opt/homebrew/bin").join(binary_name));
     }
 
     paths

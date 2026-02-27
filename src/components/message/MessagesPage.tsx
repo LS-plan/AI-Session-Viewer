@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useMemo, useRef, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppStore } from "../../stores/appStore";
 import { useChatStore } from "../../stores/chatStore";
@@ -56,7 +56,6 @@ export function MessagesPage() {
     clearChat,
     skipPermissions,
     setProjectPath: setChatProjectPath,
-    setSource: setChatSource,
     setModel: setChatModel,
     model: chatModel,
   } = useChatStore();
@@ -68,7 +67,7 @@ export function MessagesPage() {
   const project = projects.find((p) => p.id === projectId);
 
   const chatProjectPath = session?.projectPath || session?.cwd || project?.displayPath || "";
-  const cliAvailable = availableClis.some((c) => c.cliType === source);
+  const cliAvailable = availableClis.some((c) => c.cliType === "claude");
 
   // Detect CLI and set chat context on mount
   useEffect(() => {
@@ -76,12 +75,11 @@ export function MessagesPage() {
   }, [detectCli]);
 
   useEffect(() => {
-    setChatSource(source as "claude" | "codex");
     setChatProjectPath(chatProjectPath);
     if (!chatModel) {
-      setChatModel(source === "codex" ? "codex-mini-latest" : "claude-sonnet-4-20250514");
+      setChatModel("claude-sonnet-4-20250514");
     }
-  }, [source, chatProjectPath, chatModel, setChatSource, setChatProjectPath, setChatModel]);
+  }, [chatProjectPath, chatModel, setChatProjectPath, setChatModel]);
 
   // Clear chat state when leaving the page / switching sessions
   useEffect(() => {
@@ -190,7 +188,6 @@ export function MessagesPage() {
   const handleSendChat = (prompt: string) => {
     if (!session) return;
     continueExistingChat(
-      source as "claude" | "codex",
       session.sessionId,
       chatProjectPath,
       prompt,
@@ -198,7 +195,7 @@ export function MessagesPage() {
     );
   };
 
-  const assistantName = source === "claude" ? "Claude" : "Codex";
+  const assistantName = "Claude";
 
   return (
     <div className="flex flex-col h-full relative">
@@ -292,11 +289,7 @@ export function MessagesPage() {
 
         {/* Inline streaming messages from continue-chat */}
         {chatMessages.length > 0 && (
-          <div className="max-w-4xl mx-auto px-6 py-2 space-y-1 border-t border-dashed border-border mt-2">
-            {chatMessages.map((msg) => (
-              <StreamingMessage key={msg.id} message={msg} source={source} />
-            ))}
-          </div>
+          <ChatMessagesBlock messages={chatMessages} />
         )}
         {chatStreaming && (
           <div className="max-w-4xl mx-auto px-6">
@@ -353,6 +346,37 @@ export function MessagesPage() {
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Helper: Chat messages with tool linking ── */
+
+function ChatMessagesBlock({ messages }: { messages: import("../../types/chat").ChatMessage[] }) {
+  const { toolResultMap, linkedToolUseIds } = useMemo(() => {
+    const resultMap = new Map<string, { content: string; isError: boolean }>();
+    const linkedIds = new Set<string>();
+    for (const msg of messages) {
+      for (const block of msg.content) {
+        if (block.type === "tool_result") {
+          resultMap.set(block.toolUseId, { content: block.content, isError: block.isError });
+          linkedIds.add(block.toolUseId);
+        }
+      }
+    }
+    return { toolResultMap: resultMap, linkedToolUseIds: linkedIds };
+  }, [messages]);
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-2 space-y-1 border-t border-dashed border-border mt-2">
+      {messages.map((msg) => (
+        <StreamingMessage
+          key={msg.id}
+          message={msg}
+          toolResultMap={toolResultMap}
+          linkedToolUseIds={linkedToolUseIds}
+        />
+      ))}
     </div>
   );
 }

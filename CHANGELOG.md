@@ -4,6 +4,52 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] - 2026-02-27
+
+### Added
+
+#### 工具调用专用查看器
+- 新增 6 种工具专用查看器，替代原有的纯 JSON 折叠展示：
+  - **Read** — 语法高亮代码 + 行号，自动识别文件语言
+  - **Edit** — LCS 算法 Diff 对比视图，显示添加/删除行数统计
+  - **Write** — 语法高亮代码块，支持复制按钮
+  - **Bash** — 终端风格展示（`$` 前缀命令 + 输出），错误高亮
+  - **Grep/Glob** — 搜索参数 + 结果展示
+  - **Default** — 通用 JSON 输入/输出（兜底）
+- 工具调用链接：`tool_use` 与 `tool_result` 跨消息自动配对，在 tool_use 处统一展示输入和输出
+
+#### 对话轮次分组
+- 消息按对话轮次（Turn）自动分组，每轮以用户文本消息开始
+- 轮次间显示分隔线和轮次编号
+- 每轮显示该轮累计 token 用量
+
+#### Token 用量详细展示
+- 会话头部显示累计 token 明细：输入 / 输出 / 写入缓存 / 读取缓存
+- 每条助手消息显示 token 分项（输入/输出/缓存），hover 查看完整明细
+- 对话结束的 result 消息显示完整 token 分项，**不再显示价格**
+
+#### 虚拟化滚动
+- 使用 `@tanstack/react-virtual` 在对话轮次级别实现虚拟化
+- 超过 30 轮对话时自动启用，低于阈值使用普通渲染
+- 支持动态高度测量，适配可变内容
+
+### Changed
+
+#### 对话功能精简为 Claude 专属
+- CLI 对话和快速问答移除所有 Codex 相关逻辑，简化为 Claude 专属
+- 模型选择器、CLI 配置检测、流式输出均硬编码为 Claude
+- 设置面板移除 Codex 配置区域
+- **会话历史浏览**保留双数据源支持（Claude + Codex），不受影响
+
+### New Files
+
+| 文件 | 说明 |
+|------|------|
+| `src/components/chat/tool-viewers/DiffView.tsx` | LCS 算法 Diff 视图组件 |
+| `src/components/chat/tool-viewers/ToolViewers.tsx` | 6 种工具专用查看器 |
+
+---
+
 ## [1.6.0] - 2026-02-26
 
 ### Added
@@ -506,6 +552,7 @@ First release of Claude Memory Viewer.
 - **Search**: Rayon parallel brute-force search across all JSONL files
 - **Path Handling**: Cross-platform Claude home detection (`%USERPROFILE%\.claude` on Windows, `~/.claude` on Unix)
 
+[1.7.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.7.0
 [1.6.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.6.0
 [1.5.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.5.0
 [1.4.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.4.0

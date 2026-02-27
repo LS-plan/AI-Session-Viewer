@@ -12,7 +12,6 @@ interface ChatState {
   // Chat status
   isActive: boolean;
   sessionId: string | null;
-  source: "claude" | "codex";
   projectPath: string;
   model: string;
 
@@ -41,16 +40,14 @@ interface ChatState {
 
   // Actions
   detectCli: () => Promise<void>;
-  fetchCliConfig: (source: "claude" | "codex") => Promise<void>;
-  fetchModelList: (source: "claude" | "codex") => Promise<void>;
+  fetchCliConfig: () => Promise<void>;
+  fetchModelList: () => Promise<void>;
   startNewChat: (
-    source: "claude" | "codex",
     projectPath: string,
     prompt: string,
     model: string
   ) => Promise<void>;
   continueExistingChat: (
-    source: "claude" | "codex",
     sessionId: string,
     projectPath: string,
     prompt: string,
@@ -67,7 +64,6 @@ interface ChatState {
   setSessionId: (id: string) => void;
   setError: (e: string | null) => void;
   setProjectPath: (p: string) => void;
-  setSource: (s: "claude" | "codex") => void;
   setModel: (m: string) => void;
 }
 
@@ -107,7 +103,12 @@ function parseClaudeStreamLine(line: string): ChatMessage | null {
       model: msg.model || data.model,
       timestamp: data.timestamp || new Date().toISOString(),
       usage: usage
-        ? { inputTokens: usage.input_tokens ?? 0, outputTokens: usage.output_tokens ?? 0 }
+        ? {
+            inputTokens: usage.input_tokens ?? 0,
+            outputTokens: usage.output_tokens ?? 0,
+            cacheCreationInputTokens: usage.cache_creation_input_tokens ?? 0,
+            cacheReadInputTokens: usage.cache_read_input_tokens ?? 0,
+          }
         : undefined,
     };
   }
@@ -126,22 +127,32 @@ function parseClaudeStreamLine(line: string): ChatMessage | null {
     };
   }
 
-  // Result message — final summary
+  // Result message — final summary with token breakdown
   if (recordType === "result") {
     const text =
       data.result ||
       data.error ||
       (data.is_error ? "Error" : "Done");
-    const costInfo = data.total_cost_usd
-      ? ` (cost: $${Number(data.total_cost_usd).toFixed(4)})`
-      : "";
     const durationInfo = data.duration_ms
       ? ` (${(data.duration_ms / 1000).toFixed(1)}s)`
       : "";
+
+    // Build token usage summary
+    const usage = data.usage;
+    let tokenInfo = "";
+    if (usage) {
+      const parts: string[] = [];
+      if (usage.input_tokens) parts.push(`输入: ${usage.input_tokens.toLocaleString()}`);
+      if (usage.output_tokens) parts.push(`输出: ${usage.output_tokens.toLocaleString()}`);
+      if (usage.cache_creation_input_tokens) parts.push(`写入缓存: ${usage.cache_creation_input_tokens.toLocaleString()}`);
+      if (usage.cache_read_input_tokens) parts.push(`读取缓存: ${usage.cache_read_input_tokens.toLocaleString()}`);
+      if (parts.length > 0) tokenInfo = ` [${parts.join(" · ")}]`;
+    }
+
     return {
       id: crypto.randomUUID(),
       role: "system",
-      content: [{ type: "text", text: `${text}${durationInfo}${costInfo}` }],
+      content: [{ type: "text", text: `${text}${durationInfo}${tokenInfo}` }],
       timestamp: new Date().toISOString(),
     };
   }
@@ -213,7 +224,6 @@ function parseContentValue(content: any): ChatContentBlock[] {
 export const useChatStore = create<ChatState>((set, get) => ({
   isActive: false,
   sessionId: null,
-  source: "claude",
   projectPath: "",
   model: "",
 
@@ -244,10 +254,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  fetchCliConfig: async (source) => {
+  fetchCliConfig: async () => {
     set({ cliConfigLoading: true, cliConfigError: null });
     try {
-      const config = await api.getCliConfig(source);
+      const config = await api.getCliConfig("claude");
       set({ cliConfig: config, cliConfigLoading: false });
     } catch (e) {
       set({
@@ -257,13 +267,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  fetchModelList: async (source) => {
+  fetchModelList: async () => {
     set({ modelListLoading: true, modelListError: null });
     try {
-      // Always pass empty strings — backend auto-reads CLI config
-      const models = await api.listModels(source, "", "");
+      const models = await api.listModels("claude", "", "");
       // Merge custom models (localStorage) that aren't already in the list
-      const customKey = `chat_customModels_${source}`;
+      const customKey = "chat_customModels_claude";
       const customIds: string[] = JSON.parse(localStorage.getItem(customKey) || "[]");
       const existingIds = new Set(models.map((m) => m.id));
       const customModels: ModelInfo[] = customIds
@@ -271,7 +280,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         .map((id) => ({
           id,
           name: id,
-          provider: source === "claude" ? "anthropic" : "openai",
+          provider: "anthropic",
           group: "自定义",
           created: null,
         }));
@@ -284,12 +293,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  startNewChat: async (source, projectPath, prompt, model) => {
+  startNewChat: async (projectPath, prompt, model) => {
     const state = get();
     set({
       isActive: true,
       isStreaming: true,
-      source,
       projectPath,
       model,
       error: null,
@@ -306,7 +314,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       const sessionId = await api.startChat({
-        source,
+        source: "claude",
         projectPath,
         prompt,
         model,
@@ -321,13 +329,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  continueExistingChat: async (source, sessionId, projectPath, prompt, model) => {
+  continueExistingChat: async (sessionId, projectPath, prompt, model) => {
     const state = get();
     set({
       isActive: true,
       isStreaming: true,
       sessionId,
-      source,
       projectPath,
       model,
       error: null,
@@ -345,7 +352,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       await api.continueChat({
-        source,
+        source: "claude",
         sessionId,
         projectPath,
         prompt,
@@ -395,7 +402,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   addCustomModel: (modelId) => {
     const state = get();
-    const customKey = `chat_customModels_${state.source}`;
+    const customKey = "chat_customModels_claude";
     const existing: string[] = JSON.parse(localStorage.getItem(customKey) || "[]");
     if (!existing.includes(modelId)) {
       const updated = [...existing, modelId];
@@ -408,7 +415,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           {
             id: modelId,
             name: modelId,
-            provider: state.source === "claude" ? "anthropic" : "openai",
+            provider: "anthropic",
             group: "自定义",
             created: null,
           },
@@ -420,7 +427,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   removeCustomModel: (modelId) => {
     const state = get();
-    const customKey = `chat_customModels_${state.source}`;
+    const customKey = "chat_customModels_claude";
     const existing: string[] = JSON.parse(localStorage.getItem(customKey) || "[]");
     const updated = existing.filter((id) => id !== modelId);
     localStorage.setItem(customKey, JSON.stringify(updated));
@@ -459,6 +466,5 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setSessionId: (id) => set({ sessionId: id }),
   setError: (e) => set({ error: e }),
   setProjectPath: (p) => set({ projectPath: p }),
-  setSource: (s) => set({ source: s }),
   setModel: (m) => set({ model: m }),
 }));

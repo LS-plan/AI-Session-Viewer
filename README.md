@@ -225,23 +225,26 @@ environment:
 
 ### CLI 对话
 
-在应用内直接与 Claude Code / Codex CLI 进行对话，无需切换到终端：
+在应用内直接与 Claude Code CLI 进行对话，无需切换到终端：
 
 - 侧边栏点击「CLI 对话」进入，选择工作目录后即可开始
-- 自动检测本地已安装的 CLI 工具
+- 自动检测本地已安装的 Claude CLI
 - 流式输出，实时渲染 AI 回复（Markdown + 代码高亮）
+- **工具调用专用查看器**：Read（语法高亮 + 行号）、Edit（Diff 对比）、Write（代码预览）、Bash（终端风格）、Grep/Glob（搜索参数 + 结果）
+- **对话轮次分组**：自动按用户→助手对话分组，显示轮次编号和 token 用量
+- **Token 详细统计**：header 显示累计输入/输出/缓存读写 token，每条消息显示分项明细
+- **虚拟化滚动**：超过 30 轮自动启用虚拟滚动，长对话不卡顿
 - 支持 `--resume` 继续已有会话（消息详情页的「继续对话」按钮）
 - 输入框支持 `/model` 命令切换模型
 
-> **模型切换提示**：建议使用 `/model claude-opus-4-6` 的方式手动指定模型 ID，内置模型选择器存在已知 bug。模型 ID 示例：`claude-sonnet-4-6`、`claude-opus-4-6`、`claude-haiku-4-5`。
+> **模型切换提示**：建议使用 `/model claude-opus-4-6` 的方式手动指定模型 ID。模型 ID 示例：`claude-sonnet-4-6`、`claude-opus-4-6`、`claude-haiku-4-5`。
 
 ### 快速问答
 
-不依赖 CLI，直接调用 API 进行纯文本对话：
+不依赖 CLI，直接调用 Anthropic API 进行纯文本对话：
 
 - 侧边栏点击「快速问答」进入
-- 自动读取本地 CLI 配置文件中的 API Key（无需手动输入）
-- 支持 Claude（Anthropic API）和 Codex（OpenAI API）
+- 自动读取本地 Claude CLI 配置文件中的 API Key（无需手动输入）
 - SSE 流式输出，Markdown 实时渲染
 - 无需选择工作目录，适合快速提问
 
@@ -412,6 +415,8 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 - [x] 全局搜索会话分组模式 + 应用内使用说明
 - [x] 应用内 CLI 对话 + 快速问答模式
 - [x] CLI 配置自动检测（API Key / Base URL / 默认模型）
+- [x] 工具调用专用查看器（Read/Edit/Write/Bash/Grep/Glob）
+- [x] 对话轮次分组 + Token 详细统计 + 虚拟化滚动
 - [ ] 自定义标题栏
 - [ ] 更多 AI CLI 数据源支持（Gemini CLI 等）
 

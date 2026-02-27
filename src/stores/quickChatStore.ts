@@ -3,7 +3,6 @@ import type { QuickChatMessage, ModelInfo } from "../types/chat";
 import { api } from "../services/api";
 
 interface QuickChatState {
-  source: "claude" | "codex";
   model: string;
   messages: QuickChatMessage[];
   isStreaming: boolean;
@@ -16,16 +15,14 @@ interface QuickChatState {
   // Actions
   sendMessage: (prompt: string) => Promise<void>;
   clearMessages: () => void;
-  setSource: (s: "claude" | "codex") => void;
   setModel: (m: string) => void;
-  fetchModelList: (source: "claude" | "codex") => Promise<void>;
+  fetchModelList: () => Promise<void>;
   cancelStream: () => void;
 }
 
 let cancelFn: (() => void) | null = null;
 
 export const useQuickChatStore = create<QuickChatState>((set, get) => ({
-  source: "claude",
   model: "",
   messages: [],
   isStreaming: false,
@@ -34,7 +31,7 @@ export const useQuickChatStore = create<QuickChatState>((set, get) => ({
   modelListLoading: false,
 
   sendMessage: async (prompt: string) => {
-    const { source, model, messages } = get();
+    const { model, messages } = get();
     if (!model) {
       set({ error: "请先选择模型" });
       return;
@@ -53,7 +50,7 @@ export const useQuickChatStore = create<QuickChatState>((set, get) => ({
 
     try {
       const cleanup = await api.startQuickChat(
-        source,
+        "claude",
         newMessages,
         model,
         // onChunk
@@ -94,13 +91,12 @@ export const useQuickChatStore = create<QuickChatState>((set, get) => ({
     set({ messages: [], isStreaming: false, error: null });
   },
 
-  setSource: (s) => set({ source: s }),
   setModel: (m) => set({ model: m }),
 
-  fetchModelList: async (source) => {
+  fetchModelList: async () => {
     set({ modelListLoading: true });
     try {
-      const models = await api.listModels(source, "", "");
+      const models = await api.listModels("claude", "", "");
       set({ modelList: models, modelListLoading: false });
     } catch {
       set({ modelListLoading: false });

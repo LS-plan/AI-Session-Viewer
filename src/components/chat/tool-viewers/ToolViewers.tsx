@@ -1,0 +1,483 @@
+import { useState, useMemo } from "react";
+import {
+  FileText,
+  Pencil,
+  FilePlus,
+  Terminal,
+  Search,
+  FolderSearch,
+  Globe,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Check,
+  AlertCircle,
+} from "lucide-react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { DiffView } from "./DiffView";
+
+/* ── Types ─────────────────────────────────────────── */
+
+interface ToolInput {
+  [key: string]: unknown;
+}
+
+interface ToolViewerProps {
+  name: string;
+  input: string; // JSON string
+  result?: { content: string; isError: boolean } | null;
+}
+
+/* ── Helpers ───────────────────────────────────────── */
+
+function tryParseJson(s: string): ToolInput | null {
+  try {
+    const parsed = JSON.parse(s);
+    return typeof parsed === "object" && parsed !== null ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function getLanguageFromPath(filePath: string): string {
+  const ext = filePath.split(".").pop()?.toLowerCase() || "";
+  const map: Record<string, string> = {
+    ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx",
+    rs: "rust", py: "python", go: "go", rb: "ruby",
+    java: "java", kt: "kotlin", swift: "swift", c: "c", cpp: "cpp",
+    h: "c", hpp: "cpp", cs: "csharp", php: "php",
+    html: "html", css: "css", scss: "scss", less: "less",
+    json: "json", yaml: "yaml", yml: "yaml", toml: "toml", xml: "xml",
+    sql: "sql", sh: "bash", bash: "bash", zsh: "bash",
+    md: "markdown", mdx: "markdown", vue: "markup", svelte: "markup",
+    graphql: "graphql", gql: "graphql", dockerfile: "docker",
+    r: "r", lua: "lua", dart: "dart", zig: "zig",
+  };
+  return map[ext] || "text";
+}
+
+function getFileName(path: string): string {
+  return path.split(/[\\/]/).pop() || path;
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+      title="复制"
+    >
+      {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+    </button>
+  );
+}
+
+/* ── Tool icon helper ─────────────────────────────── */
+
+function toolIcon(name: string) {
+  const cls = "w-3.5 h-3.5";
+  switch (name) {
+    case "Read": return <FileText className={cls} />;
+    case "Edit": return <Pencil className={cls} />;
+    case "Write": return <FilePlus className={cls} />;
+    case "Bash": return <Terminal className={cls} />;
+    case "Grep": return <Search className={cls} />;
+    case "Glob": return <FolderSearch className={cls} />;
+    case "WebFetch": case "WebSearch": return <Globe className={cls} />;
+    default: return null;
+  }
+}
+
+/* ── Tool summary helper ──────────────────────────── */
+
+function toolSummary(name: string, parsed: ToolInput | null): string {
+  if (!parsed) return "";
+  switch (name) {
+    case "Read": {
+      const fp = String(parsed.file_path || "");
+      const offset = parsed.offset ? ` L${parsed.offset}` : "";
+      const limit = parsed.limit ? `-${Number(parsed.offset || 1) + Number(parsed.limit)}` : "";
+      return fp ? `${getFileName(fp)}${offset}${limit}` : "";
+    }
+    case "Edit": {
+      const fp = String(parsed.file_path || "");
+      const old = String(parsed.old_string || "");
+      const nw = String(parsed.new_string || "");
+      const oldLines = old.split("\n").length;
+      const newLines = nw.split("\n").length;
+      return fp ? `${getFileName(fp)} ${oldLines} → ${newLines} 行` : "";
+    }
+    case "Write": {
+      const fp = String(parsed.file_path || "");
+      const content = String(parsed.content || "");
+      const lines = content.split("\n").length;
+      return fp ? `${getFileName(fp)} ${lines} 行` : "";
+    }
+    case "Bash": {
+      const cmd = String(parsed.command || "");
+      return cmd.length > 60 ? cmd.slice(0, 60) + "..." : cmd;
+    }
+    case "Grep": {
+      const pat = String(parsed.pattern || "");
+      const path = parsed.path ? ` in ${getFileName(String(parsed.path))}` : "";
+      return `"${pat}"${path}`;
+    }
+    case "Glob": {
+      const pat = String(parsed.pattern || "");
+      return pat;
+    }
+    default:
+      return "";
+  }
+}
+
+/* ── Main ToolViewer ──────────────────────────────── */
+
+export function ToolViewer({ name, input, result }: ToolViewerProps) {
+  const [expanded, setExpanded] = useState(false);
+  const parsed = useMemo(() => tryParseJson(input), [input]);
+  const summary = useMemo(() => toolSummary(name, parsed), [name, parsed]);
+  const hasError = result?.isError ?? false;
+
+  return (
+    <div
+      className={`mt-2 mb-2 border rounded-md overflow-hidden ${
+        hasError ? "border-red-500/30" : "border-border"
+      }`}
+    >
+      {/* Header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={`w-full flex items-center gap-2 px-3 py-2 text-xs transition-colors ${
+          hasError
+            ? "bg-red-500/5 hover:bg-red-500/10"
+            : "bg-muted/50 hover:bg-muted"
+        }`}
+      >
+        {toolIcon(name) || <div className="w-3.5 h-3.5" />}
+        <span className="font-mono font-medium">{name}</span>
+        {summary && (
+          <span className="text-muted-foreground truncate max-w-[20rem]">
+            {summary}
+          </span>
+        )}
+        {hasError && <AlertCircle className="w-3 h-3 text-red-400" />}
+        {expanded ? (
+          <ChevronDown className="w-3 h-3 ml-auto shrink-0" />
+        ) : (
+          <ChevronRight className="w-3 h-3 ml-auto shrink-0" />
+        )}
+      </button>
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="border-t border-border">
+          <ToolContent name={name} parsed={parsed} rawInput={input} result={result} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Content dispatcher ───────────────────────────── */
+
+function ToolContent({
+  name,
+  parsed,
+  rawInput,
+  result,
+}: {
+  name: string;
+  parsed: ToolInput | null;
+  rawInput: string;
+  result?: { content: string; isError: boolean } | null;
+}) {
+  switch (name) {
+    case "Read":
+      return <ReadContent parsed={parsed} result={result} />;
+    case "Edit":
+      return <EditContent parsed={parsed} result={result} />;
+    case "Write":
+      return <WriteContent parsed={parsed} result={result} />;
+    case "Bash":
+      return <BashContent parsed={parsed} result={result} />;
+    case "Grep":
+    case "Glob":
+      return <SearchContent name={name} parsed={parsed} result={result} />;
+    default:
+      return <DefaultContent rawInput={rawInput} result={result} />;
+  }
+}
+
+/* ── Read ─────────────────────────────────────────── */
+
+function ReadContent({
+  parsed,
+  result,
+}: {
+  parsed: ToolInput | null;
+  result?: { content: string; isError: boolean } | null;
+}) {
+  const filePath = String(parsed?.file_path || "");
+  const lang = getLanguageFromPath(filePath);
+  const content = result?.content || "";
+
+  if (result?.isError) {
+    return <ErrorBlock content={content} />;
+  }
+
+  if (!content) {
+    return <div className="p-3 text-xs text-muted-foreground">无内容</div>;
+  }
+
+  // Truncate if very long
+  const display = content.length > 15000 ? content.slice(0, 15000) + "\n... (truncated)" : content;
+
+  return (
+    <div className="relative group">
+      <div className="absolute right-2 top-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyButton text={content} />
+      </div>
+      <SyntaxHighlighter
+        style={oneDark}
+        language={lang}
+        showLineNumbers
+        startingLineNumber={parsed?.offset ? Number(parsed.offset) : 1}
+        customStyle={{ margin: 0, borderRadius: 0, fontSize: "11px", maxHeight: "24rem" }}
+        lineNumberStyle={{ minWidth: "2.5em", opacity: 0.4 }}
+      >
+        {display}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
+
+/* ── Edit ─────────────────────────────────────────── */
+
+function EditContent({
+  parsed,
+  result,
+}: {
+  parsed: ToolInput | null;
+  result?: { content: string; isError: boolean } | null;
+}) {
+  const filePath = String(parsed?.file_path || "");
+  const oldString = String(parsed?.old_string || "");
+  const newString = String(parsed?.new_string || "");
+
+  if (result?.isError) {
+    return <ErrorBlock content={result.content} />;
+  }
+
+  if (!oldString && !newString) {
+    return (
+      <div className="p-3 text-xs text-muted-foreground">
+        {result?.content || "无变更内容"}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <DiffView oldString={oldString} newString={newString} fileName={getFileName(filePath)} />
+      {result?.content && !result.content.startsWith("The file") && (
+        <div className="px-3 py-1.5 text-xs text-muted-foreground border-t border-border bg-muted/20">
+          {result.content.length > 200 ? result.content.slice(0, 200) + "..." : result.content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Write ────────────────────────────────────────── */
+
+function WriteContent({
+  parsed,
+  result,
+}: {
+  parsed: ToolInput | null;
+  result?: { content: string; isError: boolean } | null;
+}) {
+  const filePath = String(parsed?.file_path || "");
+  const content = String(parsed?.content || "");
+  const lang = getLanguageFromPath(filePath);
+
+  if (result?.isError) {
+    return <ErrorBlock content={result.content} />;
+  }
+
+  if (!content) {
+    return (
+      <div className="p-3 text-xs text-muted-foreground">
+        {result?.content || "无写入内容"}
+      </div>
+    );
+  }
+
+  const display = content.length > 15000 ? content.slice(0, 15000) + "\n... (truncated)" : content;
+
+  return (
+    <div className="relative group">
+      <div className="absolute right-2 top-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyButton text={content} />
+      </div>
+      <SyntaxHighlighter
+        style={oneDark}
+        language={lang}
+        showLineNumbers
+        customStyle={{ margin: 0, borderRadius: 0, fontSize: "11px", maxHeight: "24rem" }}
+        lineNumberStyle={{ minWidth: "2.5em", opacity: 0.4 }}
+      >
+        {display}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
+
+/* ── Bash ─────────────────────────────────────────── */
+
+function BashContent({
+  parsed,
+  result,
+}: {
+  parsed: ToolInput | null;
+  result?: { content: string; isError: boolean } | null;
+}) {
+  const command = String(parsed?.command || "");
+  const description = String(parsed?.description || "");
+  const output = result?.content || "";
+
+  return (
+    <div>
+      {/* Command */}
+      {description && (
+        <div className="px-3 py-1 text-xs text-muted-foreground bg-muted/30 border-b border-border">
+          {description}
+        </div>
+      )}
+      <div className="flex items-start gap-2 px-3 py-2 bg-[#1e1e1e] font-mono text-xs">
+        <span className="text-green-400 select-none shrink-0">$</span>
+        <pre className="whitespace-pre-wrap break-all text-foreground">{command}</pre>
+      </div>
+
+      {/* Output */}
+      {output && (
+        <div
+          className={`relative group border-t border-border ${
+            result?.isError ? "bg-red-500/5" : "bg-[#1e1e1e]"
+          }`}
+        >
+          <div className="absolute right-2 top-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <CopyButton text={output} />
+          </div>
+          <pre
+            className={`px-3 py-2 text-xs font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto ${
+              result?.isError ? "text-red-400" : "text-muted-foreground"
+            }`}
+          >
+            {output.length > 10000 ? output.slice(0, 10000) + "\n... (truncated)" : output}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Grep / Glob ──────────────────────────────────── */
+
+function SearchContent({
+  name,
+  parsed,
+  result,
+}: {
+  name: string;
+  parsed: ToolInput | null;
+  result?: { content: string; isError: boolean } | null;
+}) {
+  const output = result?.content || "";
+  const pattern = String(parsed?.pattern || "");
+  const path = String(parsed?.path || "");
+
+  return (
+    <div>
+      {/* Search params */}
+      <div className="px-3 py-1.5 bg-muted/30 border-b border-border text-xs font-mono">
+        <span className="text-muted-foreground">{name === "Grep" ? "pattern" : "glob"}: </span>
+        <span className="text-orange-400">{pattern}</span>
+        {path && (
+          <>
+            <span className="text-muted-foreground ml-2">in </span>
+            <span>{getFileName(path)}</span>
+          </>
+        )}
+      </div>
+
+      {/* Results */}
+      {output && (
+        <div className="relative group">
+          <div className="absolute right-2 top-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+            <CopyButton text={output} />
+          </div>
+          <pre
+            className={`px-3 py-2 text-xs font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto ${
+              result?.isError ? "text-red-400" : "text-muted-foreground"
+            }`}
+          >
+            {output.length > 10000 ? output.slice(0, 10000) + "\n... (truncated)" : output}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Default (generic tool) ───────────────────────── */
+
+function DefaultContent({
+  rawInput,
+  result,
+}: {
+  rawInput: string;
+  result?: { content: string; isError: boolean } | null;
+}) {
+  const output = result?.content || "";
+
+  return (
+    <div>
+      {/* Input */}
+      <div className="p-3 text-xs font-mono bg-muted/20 overflow-x-auto max-h-40 overflow-y-auto border-b border-border">
+        <pre className="whitespace-pre-wrap break-all">
+          {rawInput.length > 5000 ? rawInput.slice(0, 5000) + "\n... (truncated)" : rawInput}
+        </pre>
+      </div>
+
+      {/* Output */}
+      {output && (
+        <pre
+          className={`p-3 text-xs font-mono whitespace-pre-wrap break-all max-h-60 overflow-y-auto ${
+            result?.isError ? "text-red-400 bg-red-500/5" : "text-muted-foreground"
+          }`}
+        >
+          {output.length > 10000 ? output.slice(0, 10000) + "\n... (truncated)" : output}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+/* ── Shared error block ───────────────────────────── */
+
+function ErrorBlock({ content }: { content: string }) {
+  return (
+    <div className="p-3 text-xs font-mono text-red-400 bg-red-500/5 whitespace-pre-wrap break-all max-h-40 overflow-y-auto">
+      {content.length > 5000 ? content.slice(0, 5000) + "\n... (truncated)" : content}
+    </div>
+  );
+}
