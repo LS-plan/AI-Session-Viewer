@@ -5,6 +5,7 @@ import type {
   PaginatedMessages,
   SearchResult,
   TokenUsageSummary,
+  Bookmark,
 } from "../types";
 import type { CliInstallation, ModelInfo, StartChatParams, ContinueChatParams, CliConfig, QuickChatMessage } from "../types/chat";
 
@@ -173,4 +174,19 @@ export async function continueChat(params: ContinueChatParams): Promise<string> 
 
 export async function cancelChat(sessionId: string): Promise<void> {
   return invoke<void>("cancel_chat", { sessionId });
+}
+
+// Bookmarks API
+export async function listBookmarks(source?: string): Promise<Bookmark[]> {
+  return invoke<Bookmark[]>("list_bookmarks", { source: source || null });
+}
+
+export async function addBookmark(bookmark: Omit<Bookmark, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<Bookmark> {
+  return invoke<Bookmark>("add_bookmark", {
+    bookmark: { id: bookmark.id || "", createdAt: bookmark.createdAt || "", ...bookmark },
+  });
+}
+
+export async function removeBookmark(id: string): Promise<void> {
+  return invoke<void>("remove_bookmark", { id });
 }

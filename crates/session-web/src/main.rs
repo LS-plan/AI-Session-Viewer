@@ -161,6 +161,9 @@ async fn main() {
         .route("/api/messages", get(routes::messages::get_messages))
         .route("/api/search", get(routes::search::global_search))
         .route("/api/stats", get(routes::stats::get_stats))
+        .route("/api/bookmarks", get(routes::bookmarks::list_bookmarks))
+        .route("/api/bookmarks", post(routes::bookmarks::add_bookmark))
+        .route("/api/bookmarks/{id}", delete(routes::bookmarks::remove_bookmark))
         .layer(middleware::from_fn(check_auth));
 
     // WebSocket route (with auth via query param or header)

@@ -4,6 +4,7 @@ import type {
   PaginatedMessages,
   SearchResult,
   TokenUsageSummary,
+  Bookmark,
 } from "../types";
 import type { CliInstallation, ModelInfo, StartChatParams, ContinueChatParams, CliConfig, QuickChatMessage } from "../types/chat";
 
@@ -428,4 +429,19 @@ export async function cancelChat(_sessionId: string): Promise<void> {
   if (chatWs && chatWs.readyState === WebSocket.OPEN) {
     chatWs.send(JSON.stringify({ action: "cancel" }));
   }
+}
+
+// Bookmarks API
+export async function listBookmarks(source?: string): Promise<Bookmark[]> {
+  const params: Record<string, string> = {};
+  if (source) params.source = source;
+  return apiFetch("/api/bookmarks", params);
+}
+
+export async function addBookmark(bookmark: Omit<Bookmark, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<Bookmark> {
+  return apiPost("/api/bookmarks", { id: "", createdAt: "", ...bookmark });
+}
+
+export async function removeBookmark(id: string): Promise<void> {
+  await apiDelete(`/api/bookmarks/${encodeURIComponent(id)}`);
 }

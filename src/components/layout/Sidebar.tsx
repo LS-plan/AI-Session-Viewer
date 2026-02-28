@@ -30,6 +30,7 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  Star,
 } from "lucide-react";
 
 declare const __IS_TAURI__: boolean;
@@ -38,7 +39,7 @@ declare const __APP_VERSION__: string;
 export function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { source, setSource, projects, loadProjects, projectsLoading } =
+  const { source, setSource, projects, loadProjects, projectsLoading, bookmarks, loadBookmarks } =
     useAppStore();
   const { theme, setTheme } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
@@ -48,6 +49,7 @@ export function Sidebar() {
 
   useEffect(() => {
     loadProjects();
+    loadBookmarks();
   }, [source]);
 
   const openExternal = async (url: string) => {
@@ -151,6 +153,22 @@ export function Sidebar() {
           >
             <BarChart3 className="w-4 h-4" />
             使用统计
+          </button>
+          <button
+            onClick={() => navigate("/bookmarks")}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+              isActive("/bookmarks")
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            }`}
+          >
+            <Star className="w-4 h-4" />
+            收藏
+            {bookmarks.filter((b) => b.source === source).length > 0 && (
+              <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded-full">
+                {bookmarks.filter((b) => b.source === source).length}
+              </span>
+            )}
           </button>
         </div>
 

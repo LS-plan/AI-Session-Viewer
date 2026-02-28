@@ -1,3 +1,4 @@
+pub mod bookmarks;
 pub mod messages;
 pub mod projects;
 pub mod search;

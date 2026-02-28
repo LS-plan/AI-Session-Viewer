@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useCallback, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAppStore } from "../../stores/appStore";
 import { useChatStore } from "../../stores/chatStore";
 import { useChatStream } from "../../hooks/useChatStream";
@@ -18,6 +18,8 @@ export function MessagesPage() {
   const params = useParams();
   const projectId = params.projectId || "";
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const scrollToMessageId = searchParams.get("scrollTo");
 
   // Use React Router's wildcard param (already decoded) instead of manual pathname slicing
   const rawFilePath = params["*"] || "";
@@ -117,6 +119,11 @@ export function MessagesPage() {
   // Auto-scroll to bottom on initial load
   useEffect(() => {
     if (!initialScrollDone && messages.length > 0 && !messagesLoading) {
+      // If scrollTo param is set, skip auto-scroll to bottom
+      if (scrollToMessageId) {
+        setInitialScrollDone(true);
+        return;
+      }
       requestAnimationFrame(() => {
         if (containerRef.current) {
           containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -124,7 +131,27 @@ export function MessagesPage() {
         setInitialScrollDone(true);
       });
     }
-  }, [messages, messagesLoading, initialScrollDone]);
+  }, [messages, messagesLoading, initialScrollDone, scrollToMessageId]);
+
+  // Scroll to specific message when scrollTo param is set
+  useEffect(() => {
+    if (!scrollToMessageId || !initialScrollDone || messagesLoading) return;
+    requestAnimationFrame(() => {
+      const el = containerRef.current?.querySelector(
+        `[data-user-msg-id="${scrollToMessageId}"]`
+      );
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Flash highlight
+        el.classList.add("ring-2", "ring-yellow-500/50", "rounded-lg");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-yellow-500/50", "rounded-lg");
+        }, 2000);
+        // Clear the param
+        setSearchParams({}, { replace: true });
+      }
+    });
+  }, [scrollToMessageId, initialScrollDone, messagesLoading, setSearchParams]);
 
   // Preserve scroll position after prepending older messages
   useEffect(() => {
@@ -331,7 +358,17 @@ export function MessagesPage() {
             加载消息中...
           </div>
         ) : (
-          <MessageThread messages={messages} source={source} showTimestamp={showTimestamp} showModel={showModel} />
+          <MessageThread
+            messages={messages}
+            source={source}
+            showTimestamp={showTimestamp}
+            showModel={showModel}
+            sessionId={session?.sessionId}
+            projectId={projectId}
+            filePath={filePath}
+            sessionTitle={session?.alias || session?.firstPrompt || session?.sessionId}
+            projectName={project?.shortName || projectId}
+          />
         )}
         {!messagesLoading && messages.length > 0 && chatMessages.length === 0 && !chatStreaming && (
           <div className="text-center py-4 text-xs text-muted-foreground">

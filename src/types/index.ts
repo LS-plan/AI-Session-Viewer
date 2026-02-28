@@ -84,3 +84,16 @@ export interface SearchResult {
   timestamp: string | null;
   filePath: string;
 }
+
+export interface Bookmark {
+  id: string;
+  source: string;
+  projectId: string;
+  sessionId: string;
+  filePath: string;
+  messageId: string | null;
+  preview: string;
+  sessionTitle: string;
+  projectName: string;
+  createdAt: string;
+}

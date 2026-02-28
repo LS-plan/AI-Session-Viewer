@@ -11,6 +11,7 @@ import {
   Loader2,
   Tag,
   Copy,
+  Star,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -33,6 +34,10 @@ export function SessionsPage() {
     allTags,
     tagFilter,
     setTagFilter,
+    addBookmark,
+    removeBookmark,
+    isBookmarked,
+    bookmarks,
   } = useAppStore();
 
   const project = projects.find((p) => p.id === projectId);
@@ -247,6 +252,37 @@ export function SessionsPage() {
                   </div>
                 </div>
                 <div className="shrink-0 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const bookmarked = isBookmarked(session.sessionId);
+                      if (bookmarked) {
+                        const bm = bookmarks.find(
+                          (b) => b.sessionId === session.sessionId && b.messageId === null
+                        );
+                        if (bm) removeBookmark(bm.id);
+                      } else {
+                        addBookmark({
+                          source,
+                          projectId: projectId,
+                          sessionId: session.sessionId,
+                          filePath: session.filePath,
+                          messageId: null,
+                          preview: "",
+                          sessionTitle: session.alias || session.firstPrompt || session.sessionId,
+                          projectName: project?.shortName || projectId,
+                        });
+                      }
+                    }}
+                    className={`p-1.5 text-xs rounded-md transition-colors ${
+                      isBookmarked(session.sessionId)
+                        ? "text-yellow-500"
+                        : "text-muted-foreground hover:text-yellow-500"
+                    }`}
+                    title={isBookmarked(session.sessionId) ? "取消收藏" : "收藏会话"}
+                  >
+                    <Star className={`w-3.5 h-3.5 ${isBookmarked(session.sessionId) ? "fill-current" : ""}`} />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

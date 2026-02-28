@@ -59,9 +59,21 @@ pub fn parse_session_messages(
                 continue;
             }
 
+            // Fix: tool_result messages stored as role="user" should be treated as "tool"
+            let role = if msg.role == "user"
+                && !display_blocks.is_empty()
+                && display_blocks
+                    .iter()
+                    .all(|b| matches!(b, DisplayContentBlock::ToolResult { .. }))
+            {
+                "tool".to_string()
+            } else {
+                msg.role
+            };
+
             all_messages.push(DisplayMessage {
                 uuid: record.uuid,
-                role: msg.role,
+                role,
                 timestamp: record.timestamp,
                 model: msg.model,
                 content: display_blocks,
@@ -147,9 +159,20 @@ pub fn parse_all_messages(path: &Path) -> Result<Vec<DisplayMessage>, String> {
             if display_blocks.is_empty() {
                 continue;
             }
+            let role = if msg.role == "user"
+                && !display_blocks.is_empty()
+                && display_blocks
+                    .iter()
+                    .all(|b| matches!(b, DisplayContentBlock::ToolResult { .. }))
+            {
+                "tool".to_string()
+            } else {
+                msg.role
+            };
+
             messages.push(DisplayMessage {
                 uuid: record.uuid,
-                role: msg.role,
+                role,
                 timestamp: record.timestamp,
                 model: msg.model,
                 content: display_blocks,

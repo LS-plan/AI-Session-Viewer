@@ -5,6 +5,7 @@ import type {
   DisplayMessage,
   TokenUsageSummary,
   SearchResult,
+  Bookmark,
 } from "../types";
 import { api } from "../services/api";
 
@@ -53,6 +54,10 @@ interface AppState {
   crossProjectTags: Record<string, string[]>;
   globalTagFilter: string[];
 
+  // Bookmarks
+  bookmarks: Bookmark[];
+  bookmarksLoading: boolean;
+
   // Actions
   loadProjects: () => Promise<void>;
   selectProject: (projectId: string) => Promise<void>;
@@ -73,6 +78,10 @@ interface AppState {
   setTagFilter: (tags: string[]) => void;
   loadCrossProjectTags: () => Promise<void>;
   setGlobalTagFilter: (tags: string[]) => void;
+  loadBookmarks: () => Promise<void>;
+  addBookmark: (bookmark: Omit<Bookmark, "id" | "createdAt">) => Promise<void>;
+  removeBookmark: (id: string) => Promise<void>;
+  isBookmarked: (sessionId: string, messageId?: string | null) => boolean;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -134,6 +143,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   crossProjectTags: {},
   globalTagFilter: [],
+
+  bookmarks: [],
+  bookmarksLoading: false,
 
   loadProjects: async () => {
     set({ projectsLoading: true });
@@ -342,5 +354,42 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setGlobalTagFilter: (tags: string[]) => {
     set({ globalTagFilter: tags });
+  },
+
+  loadBookmarks: async () => {
+    set({ bookmarksLoading: true });
+    try {
+      const bookmarks = await api.listBookmarks();
+      set({ bookmarks, bookmarksLoading: false });
+    } catch (e) {
+      console.error("Failed to load bookmarks:", e);
+      set({ bookmarksLoading: false });
+    }
+  },
+
+  addBookmark: async (bookmark) => {
+    try {
+      const created = await api.addBookmark(bookmark);
+      set((state) => ({ bookmarks: [...state.bookmarks, created] }));
+    } catch (e) {
+      console.error("Failed to add bookmark:", e);
+    }
+  },
+
+  removeBookmark: async (id) => {
+    try {
+      await api.removeBookmark(id);
+      set((state) => ({
+        bookmarks: state.bookmarks.filter((b) => b.id !== id),
+      }));
+    } catch (e) {
+      console.error("Failed to remove bookmark:", e);
+    }
+  },
+
+  isBookmarked: (sessionId, messageId) => {
+    return get().bookmarks.some(
+      (b) => b.sessionId === sessionId && b.messageId === (messageId ?? null)
+    );
   },
 }));

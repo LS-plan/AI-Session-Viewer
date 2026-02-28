@@ -4,6 +4,40 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-03-01
+
+### Added
+
+#### 收藏系统
+- 支持收藏整个会话和会话中的具体用户消息
+- 侧边栏新增「收藏」导航入口（Star 图标），显示当前数据源的收藏数量角标
+- 会话列表页：每个会话卡片悬停时显示收藏星标按钮，已收藏时常驻显示
+- 消息详情页：每条用户消息右侧悬停时显示收藏星标按钮，已收藏时常驻显示
+- 收藏页面（`/bookmarks`）：按项目分组展示所有收藏项，区分会话级和消息级收藏
+- 点击收藏项直接跳转到对应会话，消息级收藏自动滚动到目标消息并高亮闪烁 2 秒
+- 收藏数据存储在 `~/.session-viewer-bookmarks.json`，原子写入（tmp + rename）
+- 后端：`session-core/src/bookmarks.rs` 提供 load/save/add/remove/list 操作
+- Tauri 命令：`list_bookmarks`、`add_bookmark`、`remove_bookmark`
+- Web 路由：`GET /api/bookmarks`、`POST /api/bookmarks`、`DELETE /api/bookmarks/:id`
+
+### Fixed
+
+#### tool_result 消息误识别为用户消息
+- Claude 的 `tool_result` 消息在 JSONL 中以 `role: "user"` 存储，但内容全是 `tool_result` 块
+- 修复：解析时检查如果 `role == "user"` 且所有 content blocks 都是 `ToolResult` 类型，则将 role 改为 `"tool"`
+- 这些消息现在正确渲染为左侧缩进的工具输出，timeline 导航点也不再将其误计为用户消息
+
+### New Files
+
+| 文件 | 说明 |
+|------|------|
+| `crates/session-core/src/bookmarks.rs` | 收藏核心逻辑（模型、存储、CRUD） |
+| `src-tauri/src/commands/bookmarks.rs` | Tauri 收藏命令 |
+| `crates/session-web/src/routes/bookmarks.rs` | Web 收藏路由 |
+| `src/components/bookmark/BookmarksPage.tsx` | 收藏列表页面 |
+
+---
+
 ## [1.7.1] - 2026-02-27
 
 ### Improved
@@ -569,6 +603,8 @@ First release of Claude Memory Viewer.
 - **Search**: Rayon parallel brute-force search across all JSONL files
 - **Path Handling**: Cross-platform Claude home detection (`%USERPROFILE%\.claude` on Windows, `~/.claude` on Unix)
 
+[1.8.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.8.0
+[1.7.1]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.7.1
 [1.7.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.7.0
 [1.6.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.6.0
 [1.5.0]: https://github.com/zuoliangyu/AI-Session-Viewer/releases/tag/v1.5.0

@@ -382,6 +382,9 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 | PUT | `/api/sessions/meta` | *(JSON body)* | 更新会话别名和标签 |
 | GET | `/api/tags` | `source, projectId` | 获取项目内所有标签 |
 | GET | `/api/cross-tags` | `source` | 获取跨项目全局标签 |
+| GET | `/api/bookmarks` | `source` (可选) | 获取收藏列表 |
+| POST | `/api/bookmarks` | *(JSON body)* | 添加收藏 |
+| DELETE | `/api/bookmarks/:id` | — | 删除收藏 |
 | GET | `/api/cli/detect` | — | 检测本地已安装的 CLI 工具 |
 | GET | `/api/cli/config` | `source` | 读取 CLI 配置（API Key 遮罩） |
 | POST | `/api/models` | *(JSON body)* | 获取模型列表 |
@@ -417,6 +420,7 @@ Web 服务器暴露以下 REST API，可供自定义客户端调用：
 - [x] 工具调用专用查看器（Read/Edit/Write/Bash/Grep/Glob）
 - [x] 对话轮次分组 + Token 详细统计 + 虚拟化滚动
 - [x] 模型智能记忆与自动选择（持久化 + 历史会话模型匹配）
+- [x] 收藏系统（会话级 + 消息级收藏，跳转导航）
 
 ## Star History
 
